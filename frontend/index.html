@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GlowTap - $GTAP</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a1f;
+    --bg2: #110d2a;
+    --cyan: #00f2ff;
+    --magenta: #ff00f2;
+    --gold: #ffd700;
+    --green: #00ff9d;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(0,242,255,0.15);
+    --text: #e0e8ff;
+    --muted: rgba(224,232,255,0.45);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; }
+
+  /* ── LOADER ── */
+  #loader {
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999;
+    transition:opacity .5s;
+  }
+  #loader.hide { opacity:0; pointer-events:none; }
+  .loader-logo { font-family:'Orbitron',sans-serif; font-size:2.2rem; font-weight:900;
+    background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    animation:pulse 1.5s infinite; }
+  .loader-bar { width:180px; height:3px; background:rgba(255,255,255,0.1); border-radius:99px; margin-top:20px; overflow:hidden; }
+  .loader-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta));
+    border-radius:99px; animation:loading 1.8s ease-in-out forwards; }
+  @keyframes loading { from{width:0} to{width:100%} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* ── LAYOUT ── */
+  #app { position:fixed; inset:0; display:flex; flex-direction:column; overflow:hidden; }
+  .page { display:none; flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:70px; }
+  .page.active { display:flex; flex-direction:column; }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    padding:12px 16px 8px;
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(180deg,rgba(13,10,31,1) 0%,rgba(13,10,31,0) 100%);
+    flex-shrink:0;
+  }
+  .user-info { display:flex; align-items:center; gap:10px; }
+  .avatar { width:38px; height:38px; border-radius:50%; border:2px solid var(--cyan);
+    background:linear-gradient(135deg,var(--cyan),var(--magenta)); display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700; color:#fff;
+    box-shadow:0 0 12px rgba(0,242,255,0.4); overflow:hidden; }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .user-name { font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700; color:var(--text); }
+  .level-badge {
+    display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+    background:rgba(0,242,255,0.1); border:1px solid var(--cyan);
+    border-radius:99px; font-size:.65rem; font-family:'Orbitron',sans-serif; color:var(--cyan);
+  }
+  .top-right { display:flex; align-items:center; gap:8px; }
+  .gtap-balance {
+    display:flex; align-items:center; gap:5px;
+    background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.25);
+    border-radius:99px; padding:4px 12px;
+    font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; color:var(--gold);
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; height:62px;
+    background:rgba(11,8,28,0.96); backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-around;
+    z-index:100; padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 0; border:none; background:none; color:var(--muted);
+    font-family:'Rajdhani',sans-serif; font-size:.6rem; font-weight:600;
+    letter-spacing:.05em; text-transform:uppercase; cursor:pointer; transition:.2s;
+  }
+  .nav-btn.active { color:var(--cyan); }
+  .nav-btn.active svg { filter:drop-shadow(0 0 6px var(--cyan)); }
+  .nav-btn svg { width:22px; height:22px; transition:.2s; }
+
+  /* ── MAIN TAP PAGE ── */
+  .tap-page { align-items:center; padding-top:0; }
+  .points-display {
+    text-align:center; padding:18px 16px 10px;
+    font-family:'Orbitron',sans-serif; font-size:2.8rem; font-weight:900;
+    background:linear-gradient(135deg,#fff 0%,var(--cyan) 60%,var(--magenta) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    line-height:1; letter-spacing:-.02em;
+  }
+  .points-label { text-align:center; font-size:.75rem; color:var(--muted); letter-spacing:.15em; text-transform:uppercase; margin-bottom:4px; }
+
+  /* level progress */
+  .level-section { width:100%; padding:0 20px 12px; }
+  .level-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:.72rem; color:var(--muted); }
+  .level-row span:last-child { color:var(--cyan); }
+  .progress-bar { height:4px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta)); border-radius:99px; transition:width .5s ease; }
+
+  /* crystal tap button */
+  .tap-area { flex:1; display:flex; align-items:center; justify-content:center; position:relative; width:100%; }
+  .tap-wrapper {
+    width:220px; height:220px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none;
+  }
+  .glow-ring {
+    position:absolute; inset:-20px; border-radius:50%;
+    background:radial-gradient(ellipse,rgba(0,242,255,0.15) 0%,transparent 70%);
+    animation:breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.1);opacity:1} }
+  .crystal-svg { width:180px; height:180px; filter:drop-shadow(0 0 20px rgba(0,242,255,0.6)) drop-shadow(0 0 40px rgba(255,0,242,0.3)); transition:.08s; }
+  .tap-wrapper:active .crystal-svg { transform:scale(.92); }
+  .tap-wrapper.tapped .crystal-svg { animation:tapAnim .12s ease; }
+  @keyframes tapAnim { 0%{transform:scale(1)} 50%{transform:scale(.88)} 100%{transform:scale(1)} }
+
+  /* float points */
+  .float-point {
+    position:absolute; font-family:'Orbitron',sans-serif; font-weight:700;
+    color:var(--cyan); font-size:1.1rem; pointer-events:none; z-index:50;
+    animation:floatUp .8s ease-out forwards;
+  }
+  @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(.7)} }
+
+  /* energy */
+  .energy-section { width:100%; padding:10px 20px 16px; }
+  .energy-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .energy-label { display:flex; align-items:center; gap:5px; font-size:.78rem; color:var(--muted); }
+  .energy-val { font-family:'Orbitron',sans-serif; font-size:.78rem; color:var(--cyan); }
+  .energy-bar { height:6px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; }
+  .energy-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--green)); border-radius:99px; transition:width .3s ease; }
+
+  /* quick boosts row */
+  .quick-boosts { display:flex; gap:8px; padding:0 16px 8px; }
+  .boost-chip {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:8px 4px; cursor:pointer; transition:.2s; font-size:.6rem; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.05em;
+  }
+  .boost-chip:active { transform:scale(.95); }
+  .boost-chip span:first-child { font-size:1.1rem; }
+  .boost-chip .boost-cost { color:var(--gold); font-family:'Orbitron',sans-serif; font-size:.58rem; }
+
+  /* ── CARDS ── */
+  .section-title { font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700;
+    color:var(--cyan); letter-spacing:.1em; text-transform:uppercase;
+    padding:16px 16px 10px; }
+  .card {
+    margin:0 12px 10px; background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:14px; overflow:hidden; position:relative;
+  }
+  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.4; }
+
+  /* ── LEADERBOARD ── */
+  .lb-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .lb-item:last-child { border-bottom:none; }
+  .lb-rank { font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700;
+    width:28px; text-align:center; color:var(--muted); }
+  .lb-rank.gold { color:var(--gold); }
+  .lb-rank.silver { color:#c0c0c0; }
+  .lb-rank.bronze { color:#cd7f32; }
+  .lb-av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; flex-shrink:0; }
+  .lb-name { flex:1; font-size:.85rem; font-weight:600; }
+  .lb-pts { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--cyan); }
+  .lb-self { background:rgba(0,242,255,0.06); border-radius:10px; }
+
+  /* ── SPIN WHEEL ── */
+  .spin-container { display:flex; flex-direction:column; align-items:center; padding:16px; }
+  .wheel-wrap { position:relative; width:260px; height:260px; }
+  #spinCanvas { border-radius:50%; box-shadow:0 0 30px rgba(0,242,255,0.3),0 0 60px rgba(255,0,242,0.2); }
+  .wheel-pointer {
+    position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:10px solid transparent; border-right:10px solid transparent;
+    border-top:22px solid var(--gold);
+    filter:drop-shadow(0 0 6px var(--gold));
+  }
+  .spin-btn {
+    margin-top:20px; padding:14px 48px;
+    background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    border:none; border-radius:99px; color:#000; font-family:'Orbitron',sans-serif;
+    font-size:.85rem; font-weight:700; cursor:pointer; letter-spacing:.05em;
+    box-shadow:0 0 20px rgba(0,242,255,0.4); transition:.2s;
+  }
+  .spin-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .spin-btn:active:not(:disabled) { transform:scale(.96); }
+  .spin-result { margin-top:16px; font-family:'Orbitron',sans-serif; font-size:1.1rem;
+    color:var(--gold); text-align:center; min-height:28px; }
+
+  /* ── SQUAD ── */
+  .squad-create-row { display:flex; gap:8px; margin:0 12px 10px; }
+  .squad-input {
+    flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    border-radius:10px; padding:10px 14px; color:var(--text); font-family:'Rajdhani',sans-serif;
+    font-size:.9rem; outline:none;
+  }
+  .squad-input:focus { border-color:var(--cyan); }
+  .btn-primary {
+    padding:10px 18px; background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    border:none; border-radius:10px; color:#000; font-family:'Orbitron',sans-serif;
+    font-size:.7rem; font-weight:700; cursor:pointer; transition:.2s; white-space:nowrap;
+  }
+  .btn-primary:active { transform:scale(.96); }
+  .btn-secondary {
+    padding:10px 18px; background:transparent; border:1px solid var(--cyan);
+    border-radius:10px; color:var(--cyan); font-family:'Orbitron',sans-serif;
+    font-size:.7rem; font-weight:700; cursor:pointer; transition:.2s;
+  }
+  .squad-member { display:flex; align-items:center; gap:8px; padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04); }
+  .squad-member:last-child { border-bottom:none; }
+
+  /* ── TASKS ── */
+  .task-item { display:flex; align-items:center; gap:12px; padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04); }
+  .task-item:last-child { border-bottom:none; }
+  .task-icon { font-size:1.5rem; width:36px; text-align:center; flex-shrink:0; }
+  .task-info { flex:1; }
+  .task-name { font-size:.85rem; font-weight:600; }
+  .task-reward { font-size:.72rem; color:var(--gold); font-family:'Orbitron',sans-serif; }
+  .task-done { width:26px; height:26px; border-radius:50%; background:rgba(0,255,157,0.15);
+    border:1px solid var(--green); display:flex; align-items:center; justify-content:center;
+    font-size:.7rem; color:var(--green); flex-shrink:0; }
+  .task-btn { padding:6px 14px; background:rgba(0,242,255,0.1); border:1px solid var(--cyan);
+    border-radius:99px; color:var(--cyan); font-size:.65rem; font-family:'Orbitron',sans-serif;
+    cursor:pointer; transition:.2s; }
+  .task-btn:active { transform:scale(.95); }
+
+  /* ── FRIENDS ── */
+  .referral-box { margin:0 12px 10px; background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:16px; text-align:center; }
+  .referral-link {
+    background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    border-radius:10px; padding:10px 14px; font-size:.75rem; color:var(--cyan);
+    font-family:'Orbitron',sans-serif; word-break:break-all; margin:10px 0; cursor:pointer;
+  }
+  .friend-item { display:flex; align-items:center; gap:10px; padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04); }
+  .friend-item:last-child { border-bottom:none; }
+  .friend-pts { font-family:'Orbitron',sans-serif; font-size:.7rem; color:var(--gold); margin-left:auto; }
+
+  /* ── DAILY BONUS POPUP ── */
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+    backdrop-filter:blur(6px); }
+  .overlay.hide { display:none; }
+  .popup {
+    background:var(--bg2); border:1px solid var(--cyan);
+    border-radius:24px; padding:28px 20px; width:100%; max-width:340px;
+    text-align:center; position:relative;
+    box-shadow:0 0 40px rgba(0,242,255,0.2),0 0 80px rgba(255,0,242,0.1);
+  }
+  .popup h2 { font-family:'Orbitron',sans-serif; font-size:1.1rem; margin-bottom:6px;
+    background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .popup .reward-pts { font-family:'Orbitron',sans-serif; font-size:2.2rem; font-weight:900;
+    color:var(--gold); margin:14px 0; }
+  .streak-days { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:12px 0; }
+  .streak-day { width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.05);
+    border:1px solid var(--border); display:flex; flex-direction:column; align-items:center;
+    justify-content:center; font-size:.55rem; color:var(--muted); gap:1px; }
+  .streak-day.done { border-color:var(--green); background:rgba(0,255,157,0.1); color:var(--green); }
+  .streak-day.today { border-color:var(--gold); background:rgba(255,215,0,0.1); color:var(--gold); }
+  .streak-day .day-pts { font-family:'Orbitron',sans-serif; font-size:.58rem; }
+  .popup-btn { width:100%; padding:14px; margin-top:14px;
+    background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    border:none; border-radius:12px; color:#000; font-family:'Orbitron',sans-serif;
+    font-size:.85rem; font-weight:700; cursor:pointer; }
+
+  /* ── TOAST ── */
+  .toast {
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+    background:rgba(0,242,255,0.15); border:1px solid var(--cyan);
+    backdrop-filter:blur(10px); border-radius:99px;
+    padding:8px 20px; font-size:.8rem; color:var(--cyan); z-index:300;
+    animation:toastIn .3s ease,toastOut .3s ease 1.7s forwards;
+    white-space:nowrap;
+  }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes toastOut { to{opacity:0;transform:translateX(-50%) translateY(10px)} }
+
+  /* ── MISC ── */
+  .empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-size:.85rem; }
+  .empty-state .big { font-size:2rem; margin-bottom:8px; }
+  .loading-dots { display:inline-flex; gap:4px; }
+  .loading-dots span { width:6px; height:6px; border-radius:50%; background:var(--cyan); animation:dots 1.2s infinite; }
+  .loading-dots span:nth-child(2) { animation-delay:.2s; }
+  .loading-dots span:nth-child(3) { animation-delay:.4s; }
+  @keyframes dots { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+
+  .my-rank-banner {
+    margin:0 12px 10px; padding:10px 14px;
+    background:rgba(0,242,255,0.08); border:1px solid rgba(0,242,255,0.3);
+    border-radius:12px; display:flex; align-items:center; gap:8px; font-size:.8rem;
+  }
+  .my-rank-banner .rank-num { font-family:'Orbitron',sans-serif; font-size:1.2rem; color:var(--cyan); font-weight:700; }
+  .squad-stats { display:flex; gap:10px; margin:0 12px 10px; }
+  .stat-box { flex:1; background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:12px; text-align:center; }
+  .stat-num { font-family:'Orbitron',sans-serif; font-size:1rem; color:var(--cyan); font-weight:700; }
+  .stat-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">GlowTap</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<!-- DAILY BONUS POPUP -->
+<div class="overlay hide" id="dailyOverlay">
+  <div class="popup">
+    <h2>🌟 Daily Login Bonus</h2>
+    <p style="color:var(--muted);font-size:.8rem;margin-top:4px">Day <span id="streakDay">1</span> Streak!</p>
+    <div class="reward-pts" id="dailyReward">+500</div>
+    <div class="streak-days" id="streakDays"></div>
+    <button class="popup-btn" onclick="claimDaily()">Claim Reward</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="user-info">
+      <div class="avatar" id="userAvatar">GT</div>
+      <div>
+        <div class="user-name" id="userName">Loading...</div>
+        <div class="level-badge">⚡ Lv <span id="userLevel">1</span></div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="gtap-balance">💎 <span id="balanceDisplay">0</span></div>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+
+  <!-- TAP PAGE -->
+  <div class="page active tap-page" id="page-tap">
+    <div class="points-display" id="pointsDisplay">0</div>
+    <div class="points-label">$GTAP Points</div>
+
+    <div class="level-section">
+      <div class="level-row">
+        <span>Level <span id="lvlCurrent">1</span></span>
+        <span><span id="lvlPts">0</span> / <span id="lvlNext">5000</span></span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="lvlBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="tap-area">
+      <div class="tap-wrapper" id="tapBtn">
+        <div class="glow-ring"></div>
+        <svg class="crystal-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="cg1" cx="35%" cy="30%">
+              <stop offset="0%" stop-color="#b0ffff"/>
+              <stop offset="40%" stop-color="#00f2ff" stop-opacity=".9"/>
+              <stop offset="100%" stop-color="#0033ff" stop-opacity=".7"/>
+            </radialGradient>
+            <radialGradient id="cg2" cx="65%" cy="30%">
+              <stop offset="0%" stop-color="#ffb0ff"/>
+              <stop offset="50%" stop-color="#ff00f2" stop-opacity=".8"/>
+              <stop offset="100%" stop-color="#3300aa" stop-opacity=".6"/>
+            </radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- main crystal body -->
+          <polygon points="100,18 148,58 158,115 100,182 42,115 52,58" fill="url(#cg1)" opacity=".85" filter="url(#glow)"/>
+          <polygon points="100,18 148,58 158,115 100,182 42,115 52,58" fill="url(#cg2)" opacity=".35"/>
+          <!-- facets -->
+          <polygon points="100,18 148,58 100,68" fill="#fff" opacity=".18"/>
+          <polygon points="100,18 52,58 100,68" fill="#00f2ff" opacity=".2"/>
+          <polygon points="148,58 158,115 100,68" fill="#fff" opacity=".08"/>
+          <polygon points="52,58 42,115 100,68" fill="#ff00f2" opacity=".12"/>
+          <polygon points="100,68 158,115 100,182" fill="#00f2ff" opacity=".12"/>
+          <polygon points="100,68 42,115 100,182" fill="#ff00f2" opacity=".1"/>
+          <!-- shine lines -->
+          <line x1="82" y1="30" x2="70" y2="70" stroke="#fff" stroke-width=".8" opacity=".4"/>
+          <line x1="100" y1="22" x2="95" y2="55" stroke="#fff" stroke-width="1.2" opacity=".5"/>
+          <circle cx="118" cy="42" r="4" fill="#fff" opacity=".5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="energy-section">
+      <div class="energy-row">
+        <div class="energy-label">⚡ Energy</div>
+        <div class="energy-val"><span id="energyCurrent">500</span>/<span id="energyMax">500</span></div>
+      </div>
+      <div class="energy-bar"><div class="energy-fill" id="energyBar" style="width:100%"></div></div>
+    </div>
+
+    <div class="quick-boosts">
+      <div class="boost-chip" onclick="openBoostModal('multitap')">
+        <span>👆</span>
+        <span>MultiTap</span>
+        <span class="boost-cost" id="multitapCost">2000</span>
+      </div>
+      <div class="boost-chip" onclick="openBoostModal('energy_limit')">
+        <span>🔋</span>
+        <span>Energy</span>
+        <span class="boost-cost" id="energyCost">2000</span>
+      </div>
+      <div class="boost-chip" onclick="openBoostModal('recharge_speed')">
+        <span>⚡</span>
+        <span>Recharge</span>
+        <span class="boost-cost" id="rechargeCost">2000</span>
+      </div>
+      <div class="boost-chip" onclick="goToSpin()">
+        <span>🎰</span>
+        <span>Spin</span>
+        <span class="boost-cost">FREE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD PAGE -->
+  <div class="page" id="page-ranks">
+    <div class="section-title">🏆 Top Players</div>
+    <div class="my-rank-banner">
+      <span>Your Rank:</span>
+      <span class="rank-num" id="myRank">#—</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.72rem">Updates every 30s</span>
+    </div>
+    <div class="card" id="lbList">
+      <div class="empty-state"><div class="big">🏆</div>Loading leaderboard...<br><div class="loading-dots" style="margin-top:8px"><span></span><span></span><span></span></div></div>
+    </div>
+  </div>
+
+  <!-- SPIN PAGE -->
+  <div class="page" id="page-spin" style="align-items:center">
+    <div class="section-title" style="width:100%;text-align:center">🎰 Lucky Spin</div>
+    <div style="color:var(--muted);font-size:.8rem;text-align:center;margin-bottom:12px">1 free spin per day</div>
+    <div class="spin-container">
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="spinCanvas" width="260" height="260"></canvas>
+      </div>
+      <button class="spin-btn" id="spinBtn" onclick="doSpin()">🎰 SPIN</button>
+      <div class="spin-result" id="spinResult"></div>
+    </div>
+  </div>
+
+  <!-- TASKS PAGE -->
+  <div class="page" id="page-tasks">
+    <div class="section-title">✅ Tasks</div>
+    <div class="card" id="taskList"></div>
+  </div>
+
+  <!-- FRIENDS PAGE -->
+  <div class="page" id="page-friends">
+    <div class="section-title">👥 Friends & Referrals</div>
+    <div class="referral-box">
+      <div style="font-family:'Orbitron',sans-serif;font-size:.8rem;margin-bottom:4px">Your Referral Link</div>
+      <div style="color:var(--muted);font-size:.72rem;margin-bottom:8px">Invite friends → You get 2000 pts, they get 1000 pts</div>
+      <div class="referral-link" id="refLink" onclick="copyRefLink()">Loading...</div>
+      <button class="btn-primary" onclick="shareLink()" style="width:100%;margin-top:4px">📤 Share Link</button>
+    </div>
+
+    <div class="squad-stats">
+      <div class="stat-box"><div class="stat-num" id="refCount">0</div><div class="stat-label">Friends</div></div>
+      <div class="stat-box"><div class="stat-num" id="refEarnings">0</div><div class="stat-label">Ref Earnings</div></div>
+    </div>
+
+    <div class="section-title" style="padding-top:8px">Squad</div>
+    <div id="squadSection">
+      <div class="squad-create-row">
+        <input class="squad-input" id="squadNameInput" placeholder="Squad name..." maxlength="24">
+        <button class="btn-primary" onclick="createSquad()">Create</button>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:.78rem;margin:4px 0">— or —</div>
+      <div class="squad-create-row">
+        <input class="squad-input" id="squadIdInput" placeholder="Squad ID to join...">
+        <button class="btn-secondary" onclick="joinSquad()">Join</button>
+      </div>
+      <div class="card" id="squadInfo" style="display:none"></div>
+    </div>
+
+    <div class="section-title" style="padding-top:8px">Friends List</div>
+    <div class="card" id="friendsList">
+      <div class="empty-state"><div class="big">👥</div>No friends yet<br><span style="font-size:.75rem">Share your link to invite!</span></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchPage('tap',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Tap
+    </button>
+    <button class="nav-btn" onclick="switchPage('ranks',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Ranks
+    </button>
+    <button class="nav-btn" onclick="switchPage('spin',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Spin
+    </button>
+    <button class="nav-btn" onclick="switchPage('tasks',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Tasks
+    </button>
+    <button class="nav-btn" onclick="switchPage('friends',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Friends
+    </button>
+  </nav>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════
+const API_BASE = 'https://your-railway-url.up.railway.app'; // ← CHANGE THIS
+const BOT_USERNAME = 'glowtap_bot'; // ← CHANGE THIS
+
+const LEVEL_THRESHOLDS = [0,5000,15000,35000,70000,120000,200000,320000,500000,750000,
+  1100000,1600000,2300000,3300000,4700000,6700000,9500000,13500000,19000000,27000000];
+
+const TASKS = [
+  {id:'tg_join',   icon:'📢', name:'Join GlowTap Channel', reward:2000, url:'https://t.me/glowtap_channel'},
+  {id:'tg_share',  icon:'🔗', name:'Share GlowTap Bot',    reward:1000, url:null},
+  {id:'twitter',   icon:'🐦', name:'Follow on X/Twitter',  reward:1500, url:'https://x.com/glowtap'},
+  {id:'invite3',   icon:'👥', name:'Invite 3 Friends',     reward:5000, url:null},
+  {id:'play7',     icon:'🎯', name:'Login 7 Days Streak',  reward:8000, url:null},
+];
+
+const SPIN_SEGMENTS = [100,500,1000,2500,0,5000,200,750];
+const DAILY_REWARDS = [500,1000,2000,3000,3500,4000,5000];
+const BOOST_COSTS   = [2000,4000,8000,16000,32000,64000,128000,256000,512000,1000000];
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let state = {
+  userId: null, name:'Guest', photoUrl:'',
+  points:0, energy:500, maxEnergy:500,
+  tapsPerTap:1, energyRechargeRate:1,
+  level:1, boosts:{multitap:1,energy_limit:1,recharge_speed:1},
+  completedTasks:[], dailyStreak:0, lastClaimDate:null,
+  lastSpinDate:null, referralCount:0, referralEarnings:0,
+  squadId:null
+};
+let saveTimer = null;
+let lbTimer   = null;
+let spinning  = false;
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+window.Telegram?.WebApp?.expand();
+window.Telegram?.WebApp?.enableClosingConfirmation?.();
+
+async function init() {
+  const tg = window.Telegram?.WebApp;
+  const u  = tg?.initDataUnsafe?.user;
+  if (u) {
+    state.userId   = String(u.id);
+    state.name     = u.first_name + (u.last_name ? ' '+u.last_name : '');
+    state.photoUrl = u.photo_url || '';
+  } else {
+    // Dev fallback
+    state.userId = 'dev_' + Date.now();
+    state.name   = 'Dev User';
+  }
+
+  try {
+    const res  = await apiFetch(`/api/user/${state.userId}?name=${encodeURIComponent(state.name)}&photo_url=${encodeURIComponent(state.photoUrl)}`);
+    const data = await res.json();
+    mergeState(data);
+  } catch(e) {
+    console.warn('API unavailable, using local state');
+    // Load from localStorage fallback
+    const saved = localStorage.getItem('glowtapUserData_v1');
+    if (saved) try { mergeState(JSON.parse(saved)); } catch(_){}
+  }
+
+  updateUI();
+  startEnergyRecharge();
+  renderTasks();
+  setupTapBtn();
+  drawWheel();
+
+  // Check daily bonus
+  checkDailyBonus();
+
+  // Referral link
+  const refUrl = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
+  document.getElementById('refLink').textContent = refUrl;
+
+  // Hide loader
+  setTimeout(()=> document.getElementById('loader').classList.add('hide'), 1800);
+}
+
+function mergeState(data) {
+  if (!data) return;
+  state.points            = data.points            ?? state.points;
+  state.energy            = data.energy            ?? state.energy;
+  state.maxEnergy         = data.max_energy        ?? state.maxEnergy;
+  state.tapsPerTap        = data.taps_per_tap      ?? state.tapsPerTap;
+  state.energyRechargeRate= data.energy_recharge_rate ?? state.energyRechargeRate;
+  state.level             = data.level             ?? state.level;
+  state.boosts            = data.boosts            ?? state.boosts;
+  state.completedTasks    = data.completed_tasks   ?? state.completedTasks;
+  state.dailyStreak       = data.daily_streak      ?? state.dailyStreak;
+  state.lastClaimDate     = data.last_claim_date   ?? state.lastClaimDate;
+  state.lastSpinDate      = data.last_spin_date    ?? state.lastSpinDate;
+  state.referralCount     = data.referral_count    ?? state.referralCount;
+  state.referralEarnings  = data.referral_earnings ?? state.referralEarnings;
+  state.squadId           = data.squad_id          ?? state.squadId;
+}
+
+// ═══════════════════════════════════════
+//  API HELPERS
+// ═══════════════════════════════════════
+async function apiFetch(path, options={}) {
+  const tg = window.Telegram?.WebApp;
+  const headers = { 'Content-Type':'application/json' };
+  if (tg?.initData) headers['X-Telegram-Init-Data'] = tg.initData;
+  return fetch(API_BASE + path, { ...options, headers: { ...headers, ...options.headers } });
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToServer, 3000);
+}
+
+async function saveToServer() {
+  try {
+    await apiFetch(`/api/user/${state.userId}/update`, {
+      method:'POST',
+      body: JSON.stringify({
+        points: state.points, energy: state.energy,
+        boosts: state.boosts, level: state.level,
+        taps_per_tap: state.tapsPerTap,
+        max_energy: state.maxEnergy,
+        energy_recharge_rate: state.energyRechargeRate
+      })
+    });
+  } catch {
+    localStorage.setItem('glowtapUserData_v1', JSON.stringify(state));
+  }
+}
+
+// ═══════════════════════════════════════
+//  TAP LOGIC
+// ═══════════════════════════════════════
+function setupTapBtn() {
+  const btn = document.getElementById('tapBtn');
+  btn.addEventListener('touchstart', handleTap, { passive:true });
+  btn.addEventListener('mousedown',  handleTap);
+}
+
+function handleTap(e) {
+  e.preventDefault?.();
+  if (state.energy <= 0) { showToast('⚡ Out of energy!'); return; }
+
+  const tap = Math.ceil(state.tapsPerTap);
+  state.points += tap;
+  state.energy  = Math.max(0, state.energy - 1);
+
+  updateUI();
+  scheduleSave();
+
+  // Float text
+  const touches = e.changedTouches || [{clientX: e.clientX, clientY: e.clientY}];
+  for (const t of touches) {
+    spawnFloat(t.clientX, t.clientY, `+${tap}`);
+  }
+
+  // Ripple animation
+  const btn = document.getElementById('tapBtn');
+  btn.classList.remove('tapped');
+  void btn.offsetWidth;
+  btn.classList.add('tapped');
+}
+
+function spawnFloat(x, y, text) {
+  const el = document.createElement('div');
+  el.className = 'float-point';
+  el.textContent = text;
+  el.style.left = (x - 20) + 'px';
+  el.style.top  = (y - 30) + 'px';
+  document.body.appendChild(el);
+  setTimeout(()=> el.remove(), 900);
+}
+
+function startEnergyRecharge() {
+  setInterval(()=>{
+    if (state.energy < state.maxEnergy) {
+      state.energy = Math.min(state.maxEnergy, state.energy + state.energyRechargeRate);
+      document.getElementById('energyCurrent').textContent = Math.floor(state.energy);
+      document.getElementById('energyBar').style.width = (state.energy/state.maxEnergy*100)+'%';
+    }
+  }, 1000);
+}
+
+// ═══════════════════════════════════════
+//  LEVELS
+// ═══════════════════════════════════════
+function calcLevel(pts) {
+  let lv = 1;
+  for (let i=1; i<LEVEL_THRESHOLDS.length; i++) {
+    if (pts >= LEVEL_THRESHOLDS[i]) lv = i+1; else break;
+  }
+  return Math.min(lv, 20);
+}
+
+function updateLevel() {
+  const lv  = calcLevel(state.points);
+  if (lv !== state.level) {
+    state.level      = lv;
+    state.tapsPerTap = 1 + (lv-1)*0.5;
+    if (lv > state.level) showToast(`🎉 Level Up! Lv ${lv}`);
+  }
+  const nextThresh = LEVEL_THRESHOLDS[lv] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length-1];
+  const prevThresh = LEVEL_THRESHOLDS[lv-1] ?? 0;
+  const pct = lv>=20 ? 100 : Math.min(100, ((state.points-prevThresh)/(nextThresh-prevThresh))*100);
+
+  document.getElementById('lvlCurrent').textContent = lv;
+  document.getElementById('lvlPts').textContent     = fmtNum(state.points);
+  document.getElementById('lvlNext').textContent    = lv>=20 ? 'MAX' : fmtNum(nextThresh);
+  document.getElementById('lvlBar').style.width     = pct+'%';
+  document.getElementById('userLevel').textContent  = lv;
+}
+
+// ═══════════════════════════════════════
+//  UI UPDATE
+// ═══════════════════════════════════════
+function updateUI() {
+  document.getElementById('pointsDisplay').textContent = fmtNum(state.points);
+  document.getElementById('balanceDisplay').textContent= fmtNum(state.points);
+  document.getElementById('energyCurrent').textContent = Math.floor(state.energy);
+  document.getElementById('energyMax').textContent     = state.maxEnergy;
+  document.getElementById('energyBar').style.width     = (state.energy/state.maxEnergy*100)+'%';
+  document.getElementById('userName').textContent      = state.name || 'Player';
+  document.getElementById('refCount').textContent      = state.referralCount;
+  document.getElementById('refEarnings').textContent   = fmtNum(state.referralEarnings);
+
+  // Avatar
+  const av = document.getElementById('userAvatar');
+  if (state.photoUrl) {
+    av.innerHTML = `<img src="${state.photoUrl}" alt="">`;
+  } else {
+    av.textContent = (state.name||'GT').slice(0,2).toUpperCase();
+  }
+
+  updateLevel();
+  updateBoostCosts();
+}
+
+function updateBoostCosts() {
+  const mt = state.boosts.multitap || 1;
+  const el = state.boosts.energy_limit || 1;
+  const rs = state.boosts.recharge_speed || 1;
+  document.getElementById('multitapCost').textContent = fmtNum(BOOST_COSTS[Math.min(mt-1,9)]);
+  document.getElementById('energyCost').textContent   = fmtNum(BOOST_COSTS[Math.min(el-1,9)]);
+  document.getElementById('rechargeCost').textContent = fmtNum(BOOST_COSTS[Math.min(rs-1,9)]);
+}
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+function switchPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=> p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+
+  if (name==='ranks') loadLeaderboard();
+  if (name==='spin')  drawWheel();
+  if (name==='friends') loadFriends();
+}
+
+function goToSpin() {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-spin').classList.add('active');
+  document.querySelectorAll('.nav-btn')[2].classList.add('active');
+  drawWheel();
+}
+
+// ═══════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════
+async function loadLeaderboard() {
+  clearInterval(lbTimer);
+  await fetchLB();
+  lbTimer = setInterval(fetchLB, 30000);
+}
+
+async function fetchLB() {
+  try {
+    const [lbRes, rankRes] = await Promise.all([
+      apiFetch('/api/leaderboard'),
+      apiFetch(`/api/leaderboard/rank/${state.userId}`)
+    ]);
+    const lb   = await lbRes.json();
+    const rank = await rankRes.json();
+
+    document.getElementById('myRank').textContent = '#'+(rank.rank||'—');
+    renderLB(lb);
+  } catch {
+    document.getElementById('lbList').innerHTML = `
+      <div class="empty-state"><div class="big">⚠️</div>Could not load leaderboard<br><span style="font-size:.72rem">Check your connection</span></div>`;
+  }
+}
+
+function renderLB(players) {
+  if (!players?.length) {
+    document.getElementById('lbList').innerHTML = `<div class="empty-state"><div class="big">🏆</div>No players yet!</div>`;
+    return;
+  }
+  const html = players.map((p,i)=>{
+    const isSelf = p._id === state.userId;
+    const rankCls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const medal   = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+    return `<div class="lb-item ${isSelf?'lb-self':''}">
+      <div class="lb-rank ${rankCls}">${medal}</div>
+      <div class="lb-av">${(p.name||'?').slice(0,2).toUpperCase()}</div>
+      <div class="lb-name">${escHtml(p.name||'Player')}${isSelf?' (You)':''}</div>
+      <div class="lb-pts">${fmtNum(p.points)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('lbList').innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+//  DAILY BONUS
+// ═══════════════════════════════════════
+function checkDailyBonus() {
+  const today = new Date().toDateString();
+  if (state.lastClaimDate === today) return;
+
+  // Show popup
+  const streak = (state.dailyStreak || 0) + 1;
+  const day    = Math.min(streak, 7);
+  const reward = DAILY_REWARDS[day-1];
+
+  document.getElementById('streakDay').textContent    = day;
+  document.getElementById('dailyReward').textContent  = '+'+fmtNum(reward);
+  renderStreakDays(day);
+  document.getElementById('dailyOverlay').classList.remove('hide');
+}
+
+function renderStreakDays(currentDay) {
+  const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const html  = DAILY_REWARDS.map((r,i)=>{
+    const d = i+1;
+    const cls = d < currentDay ? 'done' : d === currentDay ? 'today' : '';
+    return `<div class="streak-day ${cls}">
+      <span>${names[i]}</span>
+      <span class="day-pts">${r>=1000?(r/1000)+'K':r}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('streakDays').innerHTML = html;
+}
+
+async function claimDaily() {
+  document.getElementById('dailyOverlay').classList.add('hide');
+  try {
+    const res  = await apiFetch(`/api/daily-claim/${state.userId}`, {method:'POST'});
+    const data = await res.json();
+    if (data.points_earned) {
+      state.points      += data.points_earned;
+      state.dailyStreak  = data.streak || state.dailyStreak;
+      state.lastClaimDate= new Date().toDateString();
+      updateUI();
+      showToast(`🌟 +${fmtNum(data.points_earned)} Daily Bonus!`);
+    }
+  } catch {
+    // Offline fallback
+    const streak = (state.dailyStreak||0)+1;
+    const reward = DAILY_REWARDS[Math.min(streak-1,6)];
+    state.points      += reward;
+    state.dailyStreak  = streak;
+    state.lastClaimDate= new Date().toDateString();
+    updateUI();
+    showToast(`🌟 +${fmtNum(reward)} Daily Bonus!`);
+  }
+}
+
+// ═══════════════════════════════════════
+//  SPIN WHEEL
+// ═══════════════════════════════════════
+function drawWheel(highlightIdx = -1) {
+  const canvas = document.getElementById('spinCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 260, cx = 130, cy = 130, r = 120;
+  const seg = SPIN_SEGMENTS.length;
+  const arc = (Math.PI*2)/seg;
+  const colors = ['#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a'];
+  const hl     = ['#00f2ff','#ff00f2','#00f2ff','#ffd700','#ff4466','#00ff9d','#00f2ff','#ff00f2'];
+
+  ctx.clearRect(0,0,W,W);
+
+  SPIN_SEGMENTS.forEach((val,i)=>{
+    const start = arc*i - Math.PI/2;
+    const end   = start + arc;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end);
+    ctx.closePath();
+    ctx.fillStyle = i===highlightIdx ? hl[i] : colors[i];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,242,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // label
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start + arc/2);
+    ctx.textAlign='right'; ctx.fillStyle=i===highlightIdx?'#000':'#e0e8ff';
+    ctx.font = `bold ${val>=1000?'11':'13'}px Orbitron,monospace`;
+    ctx.fillText(val===0?'😢':val>=1000?(val/1000)+'K':val+'', r-10, 5);
+    ctx.restore();
+  });
+
+  // Center circle
+  const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,28);
+  grad.addColorStop(0,'#1a0a3a'); grad.addColorStop(1,'#0d0a1f');
+  ctx.beginPath(); ctx.arc(cx,cy,28,0,Math.PI*2);
+  ctx.fillStyle=grad; ctx.fill();
+  ctx.strokeStyle='rgba(0,242,255,0.5)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#00f2ff'; ctx.font='bold 10px Orbitron,monospace'; ctx.textAlign='center';
+  ctx.fillText('GTAP',cx,cy+4);
+}
+
+async function doSpin() {
+  if (spinning) return;
+
+  // Check if already spun today
+  const today = new Date().toDateString();
+  if (state.lastSpinDate === today) { showToast('🎰 Spin again tomorrow!'); return; }
+
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('spinResult').textContent = '';
+
+  let reward = 0, segIdx = 0;
+  try {
+    const res  = await apiFetch(`/api/spin/${state.userId}`, {method:'POST'});
+    const data = await res.json();
+    reward = data.reward ?? 0;
+    segIdx = SPIN_SEGMENTS.indexOf(reward);
+    if (segIdx<0) segIdx=0;
+  } catch {
+    segIdx = Math.floor(Math.random()*SPIN_SEGMENTS.length);
+    reward = SPIN_SEGMENTS[segIdx];
+  }
+
+  // Animate spin
+  const canvas   = document.getElementById('spinCanvas');
+  const seg      = SPIN_SEGMENTS.length;
+  const arc      = (Math.PI*2)/seg;
+  const totalRot = Math.PI*2 * (4 + Math.random()) + (arc*segIdx);
+  const duration = 3500;
+  const start    = performance.now();
+
+  function animate(now) {
+    const elapsed = now - start;
+    const t       = Math.min(elapsed/duration,1);
+    const ease    = 1 - Math.pow(1-t,4);
+    const angle   = totalRot * ease;
+    const curSeg  = Math.floor(((angle % (Math.PI*2)) / arc + seg) % seg);
+
+    const ctx = canvas.getContext('2d');
+    ctx.save(); ctx.translate(130,130); ctx.rotate(-angle); ctx.translate(-130,-130);
+    drawWheel(-1);
+    ctx.restore();
+
+    if (t<1) { requestAnimationFrame(animate); }
+    else {
+      drawWheel(segIdx);
+      spinning = false;
+      state.lastSpinDate = today;
+      if (reward > 0) {
+        state.points += reward;
+        updateUI();
+        scheduleSave();
+        document.getElementById('spinResult').textContent = `🎉 You won ${fmtNum(reward)} $GTAP!`;
+        showToast(`🎰 +${fmtNum(reward)} from Lucky Spin!`);
+      } else {
+        document.getElementById('spinResult').textContent = '😢 Better luck next time!';
+      }
+      document.getElementById('spinBtn').disabled = false;
+      document.getElementById('spinBtn').textContent = '✅ Come back tomorrow';
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// ═══════════════════════════════════════
+//  TASKS
+// ═══════════════════════════════════════
+function renderTasks() {
+  const html = TASKS.map(t=>{
+    const done = state.completedTasks.includes(t.id);
+    return `<div class="task-item">
+      <div class="task-icon">${t.icon}</div>
+      <div class="task-info">
+        <div class="task-name">${t.name}</div>
+        <div class="task-reward">+${fmtNum(t.reward)} $GTAP</div>
+      </div>
+      ${done
+        ? `<div class="task-done">✓</div>`
+        : `<div class="task-btn" onclick="completeTask('${t.id}','${t.url||''}')">Go →</div>`
+      }
+    </div>`;
+  }).join('');
+  document.getElementById('taskList').innerHTML = html;
+}
+
+async function completeTask(taskId, url) {
+  if (url) window.open(url,'_blank');
+
+  try {
+    const res  = await apiFetch(`/api/task/complete/${state.userId}`, {
+      method:'POST', body: JSON.stringify({task_id:taskId})
+    });
+    const data = await res.json();
+    if (data.points_earned) {
+      state.points += data.points_earned;
+      if (!state.completedTasks.includes(taskId)) state.completedTasks.push(taskId);
+      updateUI();
+      renderTasks();
+      showToast(`✅ Task complete! +${fmtNum(data.points_earned)}`);
+    }
+  } catch {
+    const task = TASKS.find(t=>t.id===taskId);
+    if (task && !state.completedTasks.includes(taskId)) {
+      state.points += task.reward;
+      state.completedTasks.push(taskId);
+      updateUI();
+      renderTasks();
+      showToast(`✅ +${fmtNum(task.reward)} $GTAP!`);
+      scheduleSave();
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  FRIENDS / REFERRALS
+// ═══════════════════════════════════════
+async function loadFriends() {
+  try {
+    const res   = await apiFetch(`/api/referrals/${state.userId}`);
+    const data  = await res.json();
+    state.referralCount    = data.referral_count    || state.referralCount;
+    state.referralEarnings = data.referral_earnings || state.referralEarnings;
+    updateUI();
+    renderFriendsList(data.friends || []);
+  } catch {}
+
+  // Load squad
+  if (state.squadId) loadSquad();
+}
+
+function renderFriendsList(friends) {
+  if (!friends.length) return;
+  const html = friends.map(f=>`
+    <div class="friend-item">
+      <div class="lb-av" style="width:30px;height:30px;font-size:.6rem">${(f.name||'?').slice(0,2).toUpperCase()}</div>
+      <div class="lb-name">${escHtml(f.name||'Player')}</div>
+      <div class="friend-pts">+${fmtNum(f.points)}</div>
+    </div>`).join('');
+  document.getElementById('friendsList').innerHTML = html;
+}
+
+function copyRefLink() {
+  const link = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
+  navigator.clipboard?.writeText(link).then(()=> showToast('📋 Link copied!'));
+}
+
+function shareLink() {
+  const link = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
+  const text = `🌟 Join me on GlowTap and earn $GTAP tokens! Tap the crystal and build your fortune!\n${link}`;
+  window.Telegram?.WebApp?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+}
+
+// ═══════════════════════════════════════
+//  SQUADS
+// ═══════════════════════════════════════
+async function createSquad() {
+  const name = document.getElementById('squadNameInput').value.trim();
+  if (!name) { showToast('Enter squad name'); return; }
+  try {
+    const res  = await apiFetch('/api/squad/create', {
+      method:'POST', body: JSON.stringify({user_id:state.userId, name})
+    });
+    const data = await res.json();
+    if (data.squad_id) { state.squadId = data.squad_id; loadSquad(); showToast('🛡️ Squad created!'); }
+  } catch { showToast('⚠️ API not available yet'); }
+}
+
+async function joinSquad() {
+  const squadId = document.getElementById('squadIdInput').value.trim();
+  if (!squadId) { showToast('Enter squad ID'); return; }
+  try {
+    const res  = await apiFetch('/api/squad/join', {
+      method:'POST', body: JSON.stringify({user_id:state.userId, squad_id:squadId})
+    });
+    const data = await res.json();
+    if (data.squad_id) { state.squadId = data.squad_id; loadSquad(); showToast('🛡️ Squad joined!'); }
+  } catch { showToast('⚠️ Squad not found'); }
+}
+
+async function loadSquad() {
+  try {
+    const res  = await apiFetch(`/api/squad/${state.squadId}`);
+    const data = await res.json();
+    renderSquad(data);
+  } catch {}
+}
+
+function renderSquad(squad) {
+  const el = document.getElementById('squadInfo');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;margin-bottom:8px;color:var(--cyan)">${escHtml(squad.name||'My Squad')}</div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px">ID: ${squad._id||state.squadId}</div>
+    <div style="font-size:.78rem;margin-bottom:8px;color:var(--muted)">Members: ${(squad.members||[]).length}/50 · Total: ${fmtNum(squad.total_points||0)} pts</div>
+    ${(squad.members||[]).slice(0,8).map(m=>`
+      <div class="squad-member">
+        <div class="lb-av" style="width:28px;height:28px;font-size:.6rem">${(m.name||'?').slice(0,2).toUpperCase()}</div>
+        <div style="font-size:.82rem">${escHtml(m.name||'Player')}</div>
+        <div style="margin-left:auto;font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--cyan)">${fmtNum(m.points||0)}</div>
+      </div>`).join('')}`;
+}
+
+// ═══════════════════════════════════════
+//  BOOSTS
+// ═══════════════════════════════════════
+function openBoostModal(type) {
+  const lvl  = state.boosts[type] || 1;
+  const cost = BOOST_COSTS[Math.min(lvl-1,9)];
+  const names = {multitap:'MultiTap (+0.5 tap/level)', energy_limit:'Energy Limit (+500/level)', recharge_speed:'Recharge Speed (+1/sec/level)'};
+  if (state.points < cost) { showToast(`Need ${fmtNum(cost)} pts`); return; }
+  if (confirm(`Upgrade ${names[type]} to Lv ${lvl+1} for ${fmtNum(cost)} pts?`)) buyBoost(type);
+}
+
+async function buyBoost(type) {
+  const lvl  = state.boosts[type] || 1;
+  const cost = BOOST_COSTS[Math.min(lvl-1,9)];
+  state.points -= cost;
+  state.boosts[type] = lvl+1;
+
+  if (type==='multitap')      state.tapsPerTap       = 1 + (state.boosts.multitap-1)*0.5;
+  if (type==='energy_limit')  { state.maxEnergy = 500 + (state.boosts.energy_limit-1)*500; state.energy = Math.min(state.energy, state.maxEnergy); }
+  if (type==='recharge_speed') state.energyRechargeRate = 1 + (state.boosts.recharge_speed-1);
+
+  updateUI();
+  scheduleSave();
+  showToast(`✅ Boost upgraded!`);
+
+  try {
+    await apiFetch(`/api/user/${state.userId}/boost`, {
+      method:'POST', body: JSON.stringify({boost_type:type})
+    });
+  } catch {}
+}
+
+// ═══════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════
+function fmtNum(n) {
+  n = Number(n)||0;
+  if (n>=1e9)  return (n/1e9).toFixed(1)+'B';
+  if (n>=1e6)  return (n/1e6).toFixed(1)+'M';
+  if (n>=1000) return (n/1000).toFixed(1)+'K';
+  return n.toLocaleString();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const old = document.querySelector('.toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), 2100);
+}
+
+// ═══════════════════════════════════════
+//  START
+// ═══════════════════════════════════════
+init();
+</script>
+</body>
+</html>
