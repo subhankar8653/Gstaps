@@ -9,317 +9,150 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d0a1f;
-    --bg2: #110d2a;
-    --cyan: #00f2ff;
-    --magenta: #ff00f2;
-    --gold: #ffd700;
-    --green: #00ff9d;
-    --card: rgba(255,255,255,0.04);
-    --border: rgba(0,242,255,0.15);
-    --text: #e0e8ff;
-    --muted: rgba(224,232,255,0.45);
+    --bg:#0d0a1f; --bg2:#110d2a; --cyan:#00f2ff; --magenta:#ff00f2;
+    --gold:#ffd700; --green:#00ff9d; --card:rgba(255,255,255,0.04);
+    --border:rgba(0,242,255,0.15); --text:#e0e8ff; --muted:rgba(224,232,255,0.45);
   }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; }
-
-  /* ── LOADER ── */
-  #loader {
-    position:fixed; inset:0; background:var(--bg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999;
-    transition:opacity .5s;
-  }
-  #loader.hide { opacity:0; pointer-events:none; }
-  .loader-logo { font-family:'Orbitron',sans-serif; font-size:2.2rem; font-weight:900;
-    background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    animation:pulse 1.5s infinite; }
-  .loader-bar { width:180px; height:3px; background:rgba(255,255,255,0.1); border-radius:99px; margin-top:20px; overflow:hidden; }
-  .loader-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta));
-    border-radius:99px; animation:loading 1.8s ease-in-out forwards; }
-  @keyframes loading { from{width:0} to{width:100%} }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-
-  /* ── LAYOUT ── */
-  #app { position:fixed; inset:0; display:flex; flex-direction:column; overflow:hidden; }
-  .page { display:none; flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:70px; }
-  .page.active { display:flex; flex-direction:column; }
-
-  /* ── TOP BAR ── */
-  .top-bar {
-    padding:12px 16px 8px;
-    display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(180deg,rgba(13,10,31,1) 0%,rgba(13,10,31,0) 100%);
-    flex-shrink:0;
-  }
-  .user-info { display:flex; align-items:center; gap:10px; }
-  .avatar { width:38px; height:38px; border-radius:50%; border:2px solid var(--cyan);
-    background:linear-gradient(135deg,var(--cyan),var(--magenta)); display:flex; align-items:center; justify-content:center;
-    font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700; color:#fff;
-    box-shadow:0 0 12px rgba(0,242,255,0.4); overflow:hidden; }
-  .avatar img { width:100%; height:100%; object-fit:cover; }
-  .user-name { font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700; color:var(--text); }
-  .level-badge {
-    display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
-    background:rgba(0,242,255,0.1); border:1px solid var(--cyan);
-    border-radius:99px; font-size:.65rem; font-family:'Orbitron',sans-serif; color:var(--cyan);
-  }
-  .top-right { display:flex; align-items:center; gap:8px; }
-  .gtap-balance {
-    display:flex; align-items:center; gap:5px;
-    background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.25);
-    border-radius:99px; padding:4px 12px;
-    font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; color:var(--gold);
-  }
-
-  /* ── BOTTOM NAV ── */
-  .bottom-nav {
-    position:fixed; bottom:0; left:0; right:0; height:62px;
-    background:rgba(11,8,28,0.96); backdrop-filter:blur(20px);
-    border-top:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-around;
-    z-index:100; padding-bottom:env(safe-area-inset-bottom);
-  }
-  .nav-btn {
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
-    padding:8px 0; border:none; background:none; color:var(--muted);
-    font-family:'Rajdhani',sans-serif; font-size:.6rem; font-weight:600;
-    letter-spacing:.05em; text-transform:uppercase; cursor:pointer; transition:.2s;
-  }
-  .nav-btn.active { color:var(--cyan); }
-  .nav-btn.active svg { filter:drop-shadow(0 0 6px var(--cyan)); }
-  .nav-btn svg { width:22px; height:22px; transition:.2s; }
-
-  /* ── MAIN TAP PAGE ── */
-  .tap-page { align-items:center; padding-top:0; }
-  .points-display {
-    text-align:center; padding:18px 16px 10px;
-    font-family:'Orbitron',sans-serif; font-size:2.8rem; font-weight:900;
-    background:linear-gradient(135deg,#fff 0%,var(--cyan) 60%,var(--magenta) 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    line-height:1; letter-spacing:-.02em;
-  }
-  .points-label { text-align:center; font-size:.75rem; color:var(--muted); letter-spacing:.15em; text-transform:uppercase; margin-bottom:4px; }
-
-  /* level progress */
-  .level-section { width:100%; padding:0 20px 12px; }
-  .level-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:.72rem; color:var(--muted); }
-  .level-row span:last-child { color:var(--cyan); }
-  .progress-bar { height:4px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; }
-  .progress-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta)); border-radius:99px; transition:width .5s ease; }
-
-  /* crystal tap button */
-  .tap-area { flex:1; display:flex; align-items:center; justify-content:center; position:relative; width:100%; }
-  .tap-wrapper {
-    width:220px; height:220px; position:relative;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; user-select:none;
-  }
-  .glow-ring {
-    position:absolute; inset:-20px; border-radius:50%;
-    background:radial-gradient(ellipse,rgba(0,242,255,0.15) 0%,transparent 70%);
-    animation:breathe 3s ease-in-out infinite;
-  }
-  @keyframes breathe { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.1);opacity:1} }
-  .crystal-svg { width:180px; height:180px; filter:drop-shadow(0 0 20px rgba(0,242,255,0.6)) drop-shadow(0 0 40px rgba(255,0,242,0.3)); transition:.08s; }
-  .tap-wrapper:active .crystal-svg { transform:scale(.92); }
-  .tap-wrapper.tapped .crystal-svg { animation:tapAnim .12s ease; }
-  @keyframes tapAnim { 0%{transform:scale(1)} 50%{transform:scale(.88)} 100%{transform:scale(1)} }
-
-  /* float points */
-  .float-point {
-    position:absolute; font-family:'Orbitron',sans-serif; font-weight:700;
-    color:var(--cyan); font-size:1.1rem; pointer-events:none; z-index:50;
-    animation:floatUp .8s ease-out forwards;
-  }
-  @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(.7)} }
-
-  /* energy */
-  .energy-section { width:100%; padding:10px 20px 16px; }
-  .energy-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-  .energy-label { display:flex; align-items:center; gap:5px; font-size:.78rem; color:var(--muted); }
-  .energy-val { font-family:'Orbitron',sans-serif; font-size:.78rem; color:var(--cyan); }
-  .energy-bar { height:6px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; }
-  .energy-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--green)); border-radius:99px; transition:width .3s ease; }
-
-  /* quick boosts row */
-  .quick-boosts { display:flex; gap:8px; padding:0 16px 8px; }
-  .boost-chip {
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
-    background:var(--card); border:1px solid var(--border); border-radius:12px;
-    padding:8px 4px; cursor:pointer; transition:.2s; font-size:.6rem; color:var(--muted);
-    text-transform:uppercase; letter-spacing:.05em;
-  }
-  .boost-chip:active { transform:scale(.95); }
-  .boost-chip span:first-child { font-size:1.1rem; }
-  .boost-chip .boost-cost { color:var(--gold); font-family:'Orbitron',sans-serif; font-size:.58rem; }
-
-  /* ── CARDS ── */
-  .section-title { font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700;
-    color:var(--cyan); letter-spacing:.1em; text-transform:uppercase;
-    padding:16px 16px 10px; }
-  .card {
-    margin:0 12px 10px; background:var(--card); border:1px solid var(--border);
-    border-radius:16px; padding:14px; overflow:hidden; position:relative;
-  }
-  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px;
-    background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.4; }
-
-  /* ── LEADERBOARD ── */
-  .lb-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04);
-  }
-  .lb-item:last-child { border-bottom:none; }
-  .lb-rank { font-family:'Orbitron',sans-serif; font-size:.75rem; font-weight:700;
-    width:28px; text-align:center; color:var(--muted); }
-  .lb-rank.gold { color:var(--gold); }
-  .lb-rank.silver { color:#c0c0c0; }
-  .lb-rank.bronze { color:#cd7f32; }
-  .lb-av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--magenta));
-    display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; flex-shrink:0; }
-  .lb-name { flex:1; font-size:.85rem; font-weight:600; }
-  .lb-pts { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--cyan); }
-  .lb-self { background:rgba(0,242,255,0.06); border-radius:10px; }
-
-  /* ── SPIN WHEEL ── */
-  .spin-container { display:flex; flex-direction:column; align-items:center; padding:16px; }
-  .wheel-wrap { position:relative; width:260px; height:260px; }
-  #spinCanvas { border-radius:50%; box-shadow:0 0 30px rgba(0,242,255,0.3),0 0 60px rgba(255,0,242,0.2); }
-  .wheel-pointer {
-    position:absolute; top:-10px; left:50%; transform:translateX(-50%);
-    width:0; height:0;
-    border-left:10px solid transparent; border-right:10px solid transparent;
-    border-top:22px solid var(--gold);
-    filter:drop-shadow(0 0 6px var(--gold));
-  }
-  .spin-btn {
-    margin-top:20px; padding:14px 48px;
-    background:linear-gradient(135deg,var(--cyan),var(--magenta));
-    border:none; border-radius:99px; color:#000; font-family:'Orbitron',sans-serif;
-    font-size:.85rem; font-weight:700; cursor:pointer; letter-spacing:.05em;
-    box-shadow:0 0 20px rgba(0,242,255,0.4); transition:.2s;
-  }
-  .spin-btn:disabled { opacity:.4; cursor:not-allowed; }
-  .spin-btn:active:not(:disabled) { transform:scale(.96); }
-  .spin-result { margin-top:16px; font-family:'Orbitron',sans-serif; font-size:1.1rem;
-    color:var(--gold); text-align:center; min-height:28px; }
-
-  /* ── SQUAD ── */
-  .squad-create-row { display:flex; gap:8px; margin:0 12px 10px; }
-  .squad-input {
-    flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border);
-    border-radius:10px; padding:10px 14px; color:var(--text); font-family:'Rajdhani',sans-serif;
-    font-size:.9rem; outline:none;
-  }
-  .squad-input:focus { border-color:var(--cyan); }
-  .btn-primary {
-    padding:10px 18px; background:linear-gradient(135deg,var(--cyan),var(--magenta));
-    border:none; border-radius:10px; color:#000; font-family:'Orbitron',sans-serif;
-    font-size:.7rem; font-weight:700; cursor:pointer; transition:.2s; white-space:nowrap;
-  }
-  .btn-primary:active { transform:scale(.96); }
-  .btn-secondary {
-    padding:10px 18px; background:transparent; border:1px solid var(--cyan);
-    border-radius:10px; color:var(--cyan); font-family:'Orbitron',sans-serif;
-    font-size:.7rem; font-weight:700; cursor:pointer; transition:.2s;
-  }
-  .squad-member { display:flex; align-items:center; gap:8px; padding:8px 0;
-    border-bottom:1px solid rgba(255,255,255,0.04); }
-  .squad-member:last-child { border-bottom:none; }
-
-  /* ── TASKS ── */
-  .task-item { display:flex; align-items:center; gap:12px; padding:12px 0;
-    border-bottom:1px solid rgba(255,255,255,0.04); }
-  .task-item:last-child { border-bottom:none; }
-  .task-icon { font-size:1.5rem; width:36px; text-align:center; flex-shrink:0; }
-  .task-info { flex:1; }
-  .task-name { font-size:.85rem; font-weight:600; }
-  .task-reward { font-size:.72rem; color:var(--gold); font-family:'Orbitron',sans-serif; }
-  .task-done { width:26px; height:26px; border-radius:50%; background:rgba(0,255,157,0.15);
-    border:1px solid var(--green); display:flex; align-items:center; justify-content:center;
-    font-size:.7rem; color:var(--green); flex-shrink:0; }
-  .task-btn { padding:6px 14px; background:rgba(0,242,255,0.1); border:1px solid var(--cyan);
-    border-radius:99px; color:var(--cyan); font-size:.65rem; font-family:'Orbitron',sans-serif;
-    cursor:pointer; transition:.2s; }
-  .task-btn:active { transform:scale(.95); }
-
-  /* ── FRIENDS ── */
-  .referral-box { margin:0 12px 10px; background:var(--card); border:1px solid var(--border);
-    border-radius:16px; padding:16px; text-align:center; }
-  .referral-link {
-    background:rgba(255,255,255,0.05); border:1px solid var(--border);
-    border-radius:10px; padding:10px 14px; font-size:.75rem; color:var(--cyan);
-    font-family:'Orbitron',sans-serif; word-break:break-all; margin:10px 0; cursor:pointer;
-  }
-  .friend-item { display:flex; align-items:center; gap:10px; padding:8px 0;
-    border-bottom:1px solid rgba(255,255,255,0.04); }
-  .friend-item:last-child { border-bottom:none; }
-  .friend-pts { font-family:'Orbitron',sans-serif; font-size:.7rem; color:var(--gold); margin-left:auto; }
-
-  /* ── DAILY BONUS POPUP ── */
-  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200;
-    display:flex; align-items:center; justify-content:center; padding:20px;
-    backdrop-filter:blur(6px); }
-  .overlay.hide { display:none; }
-  .popup {
-    background:var(--bg2); border:1px solid var(--cyan);
-    border-radius:24px; padding:28px 20px; width:100%; max-width:340px;
-    text-align:center; position:relative;
-    box-shadow:0 0 40px rgba(0,242,255,0.2),0 0 80px rgba(255,0,242,0.1);
-  }
-  .popup h2 { font-family:'Orbitron',sans-serif; font-size:1.1rem; margin-bottom:6px;
-    background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .popup .reward-pts { font-family:'Orbitron',sans-serif; font-size:2.2rem; font-weight:900;
-    color:var(--gold); margin:14px 0; }
-  .streak-days { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:12px 0; }
-  .streak-day { width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.05);
-    border:1px solid var(--border); display:flex; flex-direction:column; align-items:center;
-    justify-content:center; font-size:.55rem; color:var(--muted); gap:1px; }
-  .streak-day.done { border-color:var(--green); background:rgba(0,255,157,0.1); color:var(--green); }
-  .streak-day.today { border-color:var(--gold); background:rgba(255,215,0,0.1); color:var(--gold); }
-  .streak-day .day-pts { font-family:'Orbitron',sans-serif; font-size:.58rem; }
-  .popup-btn { width:100%; padding:14px; margin-top:14px;
-    background:linear-gradient(135deg,var(--cyan),var(--magenta));
-    border:none; border-radius:12px; color:#000; font-family:'Orbitron',sans-serif;
-    font-size:.85rem; font-weight:700; cursor:pointer; }
-
-  /* ── TOAST ── */
-  .toast {
-    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
-    background:rgba(0,242,255,0.15); border:1px solid var(--cyan);
-    backdrop-filter:blur(10px); border-radius:99px;
-    padding:8px 20px; font-size:.8rem; color:var(--cyan); z-index:300;
-    animation:toastIn .3s ease,toastOut .3s ease 1.7s forwards;
-    white-space:nowrap;
-  }
-  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-  @keyframes toastOut { to{opacity:0;transform:translateX(-50%) translateY(10px)} }
-
-  /* ── MISC ── */
-  .empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-size:.85rem; }
-  .empty-state .big { font-size:2rem; margin-bottom:8px; }
-  .loading-dots { display:inline-flex; gap:4px; }
-  .loading-dots span { width:6px; height:6px; border-radius:50%; background:var(--cyan); animation:dots 1.2s infinite; }
-  .loading-dots span:nth-child(2) { animation-delay:.2s; }
-  .loading-dots span:nth-child(3) { animation-delay:.4s; }
-  @keyframes dots { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
-
-  .my-rank-banner {
-    margin:0 12px 10px; padding:10px 14px;
-    background:rgba(0,242,255,0.08); border:1px solid rgba(0,242,255,0.3);
-    border-radius:12px; display:flex; align-items:center; gap:8px; font-size:.8rem;
-  }
-  .my-rank-banner .rank-num { font-family:'Orbitron',sans-serif; font-size:1.2rem; color:var(--cyan); font-weight:700; }
-  .squad-stats { display:flex; gap:10px; margin:0 12px 10px; }
-  .stat-box { flex:1; background:var(--card); border:1px solid var(--border); border-radius:12px;
-    padding:12px; text-align:center; }
-  .stat-num { font-family:'Orbitron',sans-serif; font-size:1rem; color:var(--cyan); font-weight:700; }
-  .stat-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif}
+  #loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s}
+  #loader.hide{opacity:0;pointer-events:none}
+  .loader-logo{font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:pulse 1.5s infinite}
+  .loader-bar{width:180px;height:3px;background:rgba(255,255,255,0.1);border-radius:99px;margin-top:20px;overflow:hidden}
+  .loader-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));border-radius:99px;animation:loading 1.8s ease-in-out forwards}
+  @keyframes loading{from{width:0}to{width:100%}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+  .page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:70px}
+  .page.active{display:flex;flex-direction:column}
+  .top-bar{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(13,10,31,1) 0%,rgba(13,10,31,0) 100%);flex-shrink:0}
+  .user-info{display:flex;align-items:center;gap:10px}
+  .avatar{width:38px;height:38px;border-radius:50%;border:2px solid var(--cyan);background:linear-gradient(135deg,var(--cyan),var(--magenta));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;color:#fff;box-shadow:0 0 12px rgba(0,242,255,0.4);overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  .user-name{font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;color:var(--text)}
+  .level-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(0,242,255,0.1);border:1px solid var(--cyan);border-radius:99px;font-size:.65rem;font-family:'Orbitron',sans-serif;color:var(--cyan)}
+  .top-right{display:flex;align-items:center;gap:8px}
+  .gtap-balance{display:flex;align-items:center;gap:5px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.25);border-radius:99px;padding:4px 12px;font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:700;color:var(--gold)}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:62px;background:rgba(11,8,28,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border:none;background:none;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:.2s}
+  .nav-btn.active{color:var(--cyan)}
+  .nav-btn.active svg{filter:drop-shadow(0 0 6px var(--cyan))}
+  .nav-btn svg{width:22px;height:22px;transition:.2s}
+  .tap-page{align-items:center;padding-top:0}
+  .points-display{text-align:center;padding:18px 16px 10px;font-family:'Orbitron',sans-serif;font-size:2.8rem;font-weight:900;background:linear-gradient(135deg,#fff 0%,var(--cyan) 60%,var(--magenta) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;letter-spacing:-.02em}
+  .points-label{text-align:center;font-size:.75rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px}
+  .level-section{width:100%;padding:0 20px 12px}
+  .level-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:.72rem;color:var(--muted)}
+  .level-row span:last-child{color:var(--cyan)}
+  .progress-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));border-radius:99px;transition:width .5s ease}
+  .tap-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;width:100%}
+  .tap-wrapper{width:220px;height:220px;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none}
+  .glow-ring{position:absolute;inset:-20px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,242,255,0.15) 0%,transparent 70%);animation:breathe 3s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.1);opacity:1}}
+  .crystal-svg{width:180px;height:180px;filter:drop-shadow(0 0 20px rgba(0,242,255,0.6)) drop-shadow(0 0 40px rgba(255,0,242,0.3));transition:.08s}
+  .tap-wrapper:active .crystal-svg{transform:scale(.92)}
+  .float-point{position:fixed;font-family:'Orbitron',sans-serif;font-weight:700;color:var(--cyan);font-size:1.3rem;pointer-events:none;z-index:9000;animation:floatUp .9s ease-out forwards}
+  @keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(.6)}}
+  .energy-section{width:100%;padding:10px 20px 16px}
+  .energy-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .energy-label{display:flex;align-items:center;gap:5px;font-size:.78rem;color:var(--muted)}
+  .energy-val{font-family:'Orbitron',sans-serif;font-size:.78rem;color:var(--cyan)}
+  .energy-bar{height:6px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+  .energy-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:99px;transition:width .3s ease}
+  .quick-boosts{display:flex;gap:8px;padding:0 16px 8px}
+  .boost-chip{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 4px;cursor:pointer;transition:.2s;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .boost-chip:active{transform:scale(.95)}
+  .boost-chip span:first-child{font-size:1.1rem}
+  .boost-chip .boost-cost{color:var(--gold);font-family:'Orbitron',sans-serif;font-size:.58rem}
+  .section-title{font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:700;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;padding:16px 16px 10px}
+  .card{margin:0 12px 10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;overflow:hidden;position:relative}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+  .lb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .lb-item:last-child{border-bottom:none}
+  .lb-rank{font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;width:28px;text-align:center;color:var(--muted)}
+  .lb-rank.gold{color:var(--gold)}
+  .lb-rank.silver{color:#c0c0c0}
+  .lb-rank.bronze{color:#cd7f32}
+  .lb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--magenta));display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+  .lb-name{flex:1;font-size:.85rem;font-weight:600}
+  .lb-pts{font-family:'Orbitron',sans-serif;font-size:.72rem;color:var(--cyan)}
+  .lb-self{background:rgba(0,242,255,0.06);border-radius:10px}
+  .spin-container{display:flex;flex-direction:column;align-items:center;padding:16px}
+  .wheel-wrap{position:relative;width:260px;height:260px}
+  #spinCanvas{border-radius:50%;box-shadow:0 0 30px rgba(0,242,255,0.3),0 0 60px rgba(255,0,242,0.2)}
+  .wheel-pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:22px solid var(--gold);filter:drop-shadow(0 0 6px var(--gold))}
+  .spin-btn{margin-top:20px;padding:14px 48px;background:linear-gradient(135deg,var(--cyan),var(--magenta));border:none;border-radius:99px;color:#000;font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.05em;box-shadow:0 0 20px rgba(0,242,255,0.4);transition:.2s}
+  .spin-btn:disabled{opacity:.4;cursor:not-allowed}
+  .spin-btn:active:not(:disabled){transform:scale(.96)}
+  .spin-result{margin-top:16px;font-family:'Orbitron',sans-serif;font-size:1.1rem;color:var(--gold);text-align:center;min-height:28px}
+  .squad-create-row{display:flex;gap:8px;margin:0 12px 10px}
+  .squad-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.9rem;outline:none}
+  .squad-input:focus{border-color:var(--cyan)}
+  .btn-primary{padding:10px 18px;background:linear-gradient(135deg,var(--cyan),var(--magenta));border:none;border-radius:10px;color:#000;font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+  .btn-primary:active{transform:scale(.96)}
+  .btn-secondary{padding:10px 18px;background:transparent;border:1px solid var(--cyan);border-radius:10px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:.2s}
+  .squad-member{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .squad-member:last-child{border-bottom:none}
+  .task-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .task-item:last-child{border-bottom:none}
+  .task-icon{font-size:1.5rem;width:36px;text-align:center;flex-shrink:0}
+  .task-info{flex:1}
+  .task-name{font-size:.85rem;font-weight:600}
+  .task-reward{font-size:.72rem;color:var(--gold);font-family:'Orbitron',sans-serif}
+  .task-done{width:26px;height:26px;border-radius:50%;background:rgba(0,255,157,0.15);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--green);flex-shrink:0}
+  .task-btn{padding:6px 14px;background:rgba(0,242,255,0.1);border:1px solid var(--cyan);border-radius:99px;color:var(--cyan);font-size:.65rem;font-family:'Orbitron',sans-serif;cursor:pointer;transition:.2s}
+  .task-btn:active{transform:scale(.95)}
+  .referral-box{margin:0 12px 10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;text-align:center}
+  .referral-link{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.65rem;color:var(--cyan);font-family:'Orbitron',sans-serif;word-break:break-all;margin:10px 0;cursor:pointer}
+  .friend-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .friend-item:last-child{border-bottom:none}
+  .friend-pts{font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--gold);margin-left:auto}
+  /* BOOST MODAL */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+  .overlay.hide{display:none}
+  .popup{background:var(--bg2);border:1px solid var(--cyan);border-radius:24px;padding:28px 20px;width:100%;max-width:340px;text-align:center;position:relative;box-shadow:0 0 40px rgba(0,242,255,0.2)}
+  .popup h2{font-family:'Orbitron',sans-serif;font-size:1.1rem;margin-bottom:6px;background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .popup .reward-pts{font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;color:var(--gold);margin:14px 0}
+  .streak-days{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+  .streak-day{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.55rem;color:var(--muted);gap:1px}
+  .streak-day.done{border-color:var(--green);background:rgba(0,255,157,0.1);color:var(--green)}
+  .streak-day.today{border-color:var(--gold);background:rgba(255,215,0,0.1);color:var(--gold)}
+  .streak-day .day-pts{font-family:'Orbitron',sans-serif;font-size:.58rem}
+  .popup-btn{width:100%;padding:14px;margin-top:14px;background:linear-gradient(135deg,var(--cyan),var(--magenta));border:none;border-radius:12px;color:#000;font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer}
+  /* BOOST MODAL specific */
+  .boost-modal-body{padding:10px 0}
+  .boost-modal-cost{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;color:var(--gold);margin:10px 0}
+  .boost-modal-desc{font-size:.82rem;color:var(--muted);margin-bottom:6px}
+  .boost-modal-btns{display:flex;gap:10px;margin-top:14px}
+  .boost-modal-btns button{flex:1;padding:12px;border-radius:12px;font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;border:none}
+  .btn-cancel{background:rgba(255,255,255,0.08);color:var(--muted)}
+  .btn-confirm{background:linear-gradient(135deg,var(--cyan),var(--magenta));color:#000}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,242,255,0.15);border:1px solid var(--cyan);backdrop-filter:blur(10px);border-radius:99px;padding:8px 20px;font-size:.8rem;color:var(--cyan);z-index:9998;animation:toastIn .3s ease,toastOut .3s ease 1.7s forwards;white-space:nowrap}
+  @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes toastOut{to{opacity:0;transform:translateX(-50%) translateY(10px)}}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:.85rem}
+  .empty-state .big{font-size:2rem;margin-bottom:8px}
+  .loading-dots{display:inline-flex;gap:4px}
+  .loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:dots 1.2s infinite}
+  .loading-dots span:nth-child(2){animation-delay:.2s}
+  .loading-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes dots{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  .my-rank-banner{margin:0 12px 10px;padding:10px 14px;background:rgba(0,242,255,0.08);border:1px solid rgba(0,242,255,0.3);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:.8rem}
+  .my-rank-banner .rank-num{font-family:'Orbitron',sans-serif;font-size:1.2rem;color:var(--cyan);font-weight:700}
+  .squad-stats{display:flex;gap:10px;margin:0 12px 10px}
+  .stat-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+  .stat-num{font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--cyan);font-weight:700}
+  .stat-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+  /* Level up popup */
+  .levelup-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--bg2);border:2px solid var(--gold);border-radius:20px;padding:24px 32px;text-align:center;z-index:9999;box-shadow:0 0 60px rgba(255,215,0,0.4);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+  .levelup-popup.show{transform:translate(-50%,-50%) scale(1)}
+  .levelup-popup h3{font-family:'Orbitron',sans-serif;color:var(--gold);font-size:1.4rem;margin-bottom:8px}
+  .levelup-popup p{color:var(--muted);font-size:.85rem}
 </style>
 </head>
 <body>
 
-<!-- LOADER -->
 <div id="loader">
   <div class="loader-logo">GlowTap</div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
@@ -336,9 +169,29 @@
   </div>
 </div>
 
-<!-- APP -->
+<!-- BOOST MODAL -->
+<div class="overlay hide" id="boostOverlay">
+  <div class="popup">
+    <h2 id="boostModalTitle">Upgrade Boost</h2>
+    <div class="boost-modal-body">
+      <div class="boost-modal-desc" id="boostModalDesc"></div>
+      <div class="boost-modal-cost" id="boostModalCost"></div>
+      <div style="font-size:.75rem;color:var(--muted)" id="boostModalBalance"></div>
+    </div>
+    <div class="boost-modal-btns">
+      <button class="btn-cancel" onclick="closeBoostModal()">Cancel</button>
+      <button class="btn-confirm" id="boostConfirmBtn" onclick="confirmBoost()">Upgrade ⚡</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEVEL UP POPUP -->
+<div class="levelup-popup" id="levelupPopup">
+  <h3>🎉 LEVEL UP!</h3>
+  <p id="levelupText">You reached Level 2!</p>
+</div>
+
 <div id="app">
-  <!-- TOP BAR -->
   <div class="top-bar">
     <div class="user-info">
       <div class="avatar" id="userAvatar">GT</div>
@@ -352,13 +205,10 @@
     </div>
   </div>
 
-  <!-- PAGES -->
-
   <!-- TAP PAGE -->
   <div class="page active tap-page" id="page-tap">
     <div class="points-display" id="pointsDisplay">0</div>
     <div class="points-label">$GTAP Points</div>
-
     <div class="level-section">
       <div class="level-row">
         <span>Level <span id="lvlCurrent">1</span></span>
@@ -366,11 +216,10 @@
       </div>
       <div class="progress-bar"><div class="progress-fill" id="lvlBar" style="width:0%"></div></div>
     </div>
-
     <div class="tap-area">
       <div class="tap-wrapper" id="tapBtn">
         <div class="glow-ring"></div>
-        <svg class="crystal-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <svg class="crystal-svg" id="crystalSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="cg1" cx="35%" cy="30%">
               <stop offset="0%" stop-color="#b0ffff"/>
@@ -385,24 +234,20 @@
             <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/>
               <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           </defs>
-          <!-- main crystal body -->
           <polygon points="100,18 148,58 158,115 100,182 42,115 52,58" fill="url(#cg1)" opacity=".85" filter="url(#glow)"/>
           <polygon points="100,18 148,58 158,115 100,182 42,115 52,58" fill="url(#cg2)" opacity=".35"/>
-          <!-- facets -->
           <polygon points="100,18 148,58 100,68" fill="#fff" opacity=".18"/>
           <polygon points="100,18 52,58 100,68" fill="#00f2ff" opacity=".2"/>
           <polygon points="148,58 158,115 100,68" fill="#fff" opacity=".08"/>
           <polygon points="52,58 42,115 100,68" fill="#ff00f2" opacity=".12"/>
           <polygon points="100,68 158,115 100,182" fill="#00f2ff" opacity=".12"/>
           <polygon points="100,68 42,115 100,182" fill="#ff00f2" opacity=".1"/>
-          <!-- shine lines -->
           <line x1="82" y1="30" x2="70" y2="70" stroke="#fff" stroke-width=".8" opacity=".4"/>
           <line x1="100" y1="22" x2="95" y2="55" stroke="#fff" stroke-width="1.2" opacity=".5"/>
           <circle cx="118" cy="42" r="4" fill="#fff" opacity=".5"/>
         </svg>
       </div>
     </div>
-
     <div class="energy-section">
       <div class="energy-row">
         <div class="energy-label">⚡ Energy</div>
@@ -410,26 +255,21 @@
       </div>
       <div class="energy-bar"><div class="energy-fill" id="energyBar" style="width:100%"></div></div>
     </div>
-
     <div class="quick-boosts">
       <div class="boost-chip" onclick="openBoostModal('multitap')">
-        <span>👆</span>
-        <span>MultiTap</span>
-        <span class="boost-cost" id="multitapCost">2000</span>
+        <span>👆</span><span>MultiTap</span>
+        <span class="boost-cost" id="multitapCost">2K</span>
       </div>
       <div class="boost-chip" onclick="openBoostModal('energy_limit')">
-        <span>🔋</span>
-        <span>Energy</span>
-        <span class="boost-cost" id="energyCost">2000</span>
+        <span>🔋</span><span>Energy</span>
+        <span class="boost-cost" id="energyCost">2K</span>
       </div>
       <div class="boost-chip" onclick="openBoostModal('recharge_speed')">
-        <span>⚡</span>
-        <span>Recharge</span>
-        <span class="boost-cost" id="rechargeCost">2000</span>
+        <span>⚡</span><span>Recharge</span>
+        <span class="boost-cost" id="rechargeCost">2K</span>
       </div>
       <div class="boost-chip" onclick="goToSpin()">
-        <span>🎰</span>
-        <span>Spin</span>
+        <span>🎰</span><span>Spin</span>
         <span class="boost-cost">FREE</span>
       </div>
     </div>
@@ -441,17 +281,17 @@
     <div class="my-rank-banner">
       <span>Your Rank:</span>
       <span class="rank-num" id="myRank">#—</span>
-      <span style="margin-left:auto;color:var(--muted);font-size:.72rem">Updates every 30s</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.72rem">Auto refresh 30s</span>
     </div>
     <div class="card" id="lbList">
-      <div class="empty-state"><div class="big">🏆</div>Loading leaderboard...<br><div class="loading-dots" style="margin-top:8px"><span></span><span></span><span></span></div></div>
+      <div class="empty-state"><div class="big">🏆</div>Loading...<br><div class="loading-dots" style="margin-top:8px"><span></span><span></span><span></span></div></div>
     </div>
   </div>
 
   <!-- SPIN PAGE -->
   <div class="page" id="page-spin" style="align-items:center">
     <div class="section-title" style="width:100%;text-align:center">🎰 Lucky Spin</div>
-    <div style="color:var(--muted);font-size:.8rem;text-align:center;margin-bottom:12px">1 free spin per day</div>
+    <div style="color:var(--muted);font-size:.8rem;text-align:center;margin-bottom:12px" id="spinSubtitle">1 free spin per day</div>
     <div class="spin-container">
       <div class="wheel-wrap">
         <div class="wheel-pointer"></div>
@@ -473,16 +313,14 @@
     <div class="section-title">👥 Friends & Referrals</div>
     <div class="referral-box">
       <div style="font-family:'Orbitron',sans-serif;font-size:.8rem;margin-bottom:4px">Your Referral Link</div>
-      <div style="color:var(--muted);font-size:.72rem;margin-bottom:8px">Invite friends → You get 2000 pts, they get 1000 pts</div>
+      <div style="color:var(--muted);font-size:.72rem;margin-bottom:8px">Invite → You get 2000 pts, friend gets 1000 pts</div>
       <div class="referral-link" id="refLink" onclick="copyRefLink()">Loading...</div>
       <button class="btn-primary" onclick="shareLink()" style="width:100%;margin-top:4px">📤 Share Link</button>
     </div>
-
     <div class="squad-stats">
       <div class="stat-box"><div class="stat-num" id="refCount">0</div><div class="stat-label">Friends</div></div>
       <div class="stat-box"><div class="stat-num" id="refEarnings">0</div><div class="stat-label">Ref Earnings</div></div>
     </div>
-
     <div class="section-title" style="padding-top:8px">Squad</div>
     <div id="squadSection">
       <div class="squad-create-row">
@@ -496,17 +334,15 @@
       </div>
       <div class="card" id="squadInfo" style="display:none"></div>
     </div>
-
     <div class="section-title" style="padding-top:8px">Friends List</div>
     <div class="card" id="friendsList">
-      <div class="empty-state"><div class="big">👥</div>No friends yet<br><span style="font-size:.75rem">Share your link to invite!</span></div>
+      <div class="empty-state"><div class="big">👥</div>No friends yet<br><span style="font-size:.75rem">Share your link!</span></div>
     </div>
   </div>
 
-  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="switchPage('tap',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
       Tap
     </button>
     <button class="nav-btn" onclick="switchPage('ranks',this)">
@@ -529,46 +365,39 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════
-//  CONFIG
-// ═══════════════════════════════════════
-const API_BASE = 'https://your-railway-url.up.railway.app'; // ← CHANGE THIS
-const BOT_USERNAME = 'glowtap_bot'; // ← CHANGE THIS
+// ═══ CONFIG ═══
+const API_BASE     = 'https://gstaps-production.up.railway.app';
+const BOT_USERNAME = 'Glow_testbot';
 
 const LEVEL_THRESHOLDS = [0,5000,15000,35000,70000,120000,200000,320000,500000,750000,
   1100000,1600000,2300000,3300000,4700000,6700000,9500000,13500000,19000000,27000000];
 
 const TASKS = [
-  {id:'tg_join',   icon:'📢', name:'Join GlowTap Channel', reward:2000, url:'https://t.me/glowtap_channel'},
-  {id:'tg_share',  icon:'🔗', name:'Share GlowTap Bot',    reward:1000, url:null},
-  {id:'twitter',   icon:'🐦', name:'Follow on X/Twitter',  reward:1500, url:'https://x.com/glowtap'},
-  {id:'invite3',   icon:'👥', name:'Invite 3 Friends',     reward:5000, url:null},
-  {id:'play7',     icon:'🎯', name:'Login 7 Days Streak',  reward:8000, url:null},
+  {id:'tg_join',  icon:'📢', name:'Join GlowTap Channel', reward:2000, url:'https://t.me/glowtap_channel'},
+  {id:'tg_share', icon:'🔗', name:'Share GlowTap Bot',    reward:1000, url:null},
+  {id:'twitter',  icon:'🐦', name:'Follow on X/Twitter',  reward:1500, url:'https://x.com/glowtap'},
+  {id:'invite3',  icon:'👥', name:'Invite 3 Friends',     reward:5000, url:null},
+  {id:'play7',    icon:'🎯', name:'Login 7 Days Streak',  reward:8000, url:null},
 ];
 
 const SPIN_SEGMENTS = [100,500,1000,2500,0,5000,200,750];
+const SPIN_WEIGHTS  = [20,15,12,8,15,3,17,10];
 const DAILY_REWARDS = [500,1000,2000,3000,3500,4000,5000];
 const BOOST_COSTS   = [2000,4000,8000,16000,32000,64000,128000,256000,512000,1000000];
 
-// ═══════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════
+// ═══ STATE ═══
 let state = {
-  userId: null, name:'Guest', photoUrl:'',
+  userId:null, name:'Guest', photoUrl:'',
   points:0, energy:500, maxEnergy:500,
   tapsPerTap:1, energyRechargeRate:1,
   level:1, boosts:{multitap:1,energy_limit:1,recharge_speed:1},
   completedTasks:[], dailyStreak:0, lastClaimDate:null,
-  lastSpinDate:null, referralCount:0, referralEarnings:0,
-  squadId:null
+  lastSpinDate:null, referralCount:0, referralEarnings:0, squadId:null
 };
-let saveTimer = null;
-let lbTimer   = null;
-let spinning  = false;
+let saveTimer=null, lbTimer=null, spinning=false;
+let pendingBoostType=null;
 
-// ═══════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════
+// ═══ INIT ═══
 window.Telegram?.WebApp?.expand();
 window.Telegram?.WebApp?.enableClosingConfirmation?.();
 
@@ -577,68 +406,55 @@ async function init() {
   const u  = tg?.initDataUnsafe?.user;
   if (u) {
     state.userId   = String(u.id);
-    state.name     = u.first_name + (u.last_name ? ' '+u.last_name : '');
-    state.photoUrl = u.photo_url || '';
+    state.name     = u.first_name + (u.last_name?' '+u.last_name:'');
+    state.photoUrl = u.photo_url||'';
   } else {
-    // Dev fallback
-    state.userId = 'dev_' + Date.now();
+    state.userId = 'dev_'+Math.floor(Math.random()*99999);
     state.name   = 'Dev User';
   }
-
   try {
     const res  = await apiFetch(`/api/user/${state.userId}?name=${encodeURIComponent(state.name)}&photo_url=${encodeURIComponent(state.photoUrl)}`);
     const data = await res.json();
     mergeState(data);
-  } catch(e) {
-    console.warn('API unavailable, using local state');
-    // Load from localStorage fallback
-    const saved = localStorage.getItem('glowtapUserData_v1');
+  } catch {
+    const saved = localStorage.getItem('glowtapData');
     if (saved) try { mergeState(JSON.parse(saved)); } catch(_){}
   }
-
   updateUI();
   startEnergyRecharge();
   renderTasks();
   setupTapBtn();
   drawWheel();
-
-  // Check daily bonus
   checkDailyBonus();
-
-  // Referral link
-  const refUrl = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
-  document.getElementById('refLink').textContent = refUrl;
-
-  // Hide loader
-  setTimeout(()=> document.getElementById('loader').classList.add('hide'), 1800);
+  checkSpinStatus();
+  document.getElementById('refLink').textContent = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
+  setTimeout(()=>document.getElementById('loader').classList.add('hide'), 1800);
 }
 
-function mergeState(data) {
-  if (!data) return;
-  state.points            = data.points            ?? state.points;
-  state.energy            = data.energy            ?? state.energy;
-  state.maxEnergy         = data.max_energy        ?? state.maxEnergy;
-  state.tapsPerTap        = data.taps_per_tap      ?? state.tapsPerTap;
-  state.energyRechargeRate= data.energy_recharge_rate ?? state.energyRechargeRate;
-  state.level             = data.level             ?? state.level;
-  state.boosts            = data.boosts            ?? state.boosts;
-  state.completedTasks    = data.completed_tasks   ?? state.completedTasks;
-  state.dailyStreak       = data.daily_streak      ?? state.dailyStreak;
-  state.lastClaimDate     = data.last_claim_date   ?? state.lastClaimDate;
-  state.lastSpinDate      = data.last_spin_date    ?? state.lastSpinDate;
-  state.referralCount     = data.referral_count    ?? state.referralCount;
-  state.referralEarnings  = data.referral_earnings ?? state.referralEarnings;
-  state.squadId           = data.squad_id          ?? state.squadId;
+function mergeState(d) {
+  if (!d) return;
+  state.points             = d.points            ?? state.points;
+  state.energy             = d.energy            ?? state.energy;
+  state.maxEnergy          = d.max_energy        ?? state.maxEnergy;
+  state.tapsPerTap         = d.taps_per_tap      ?? state.tapsPerTap;
+  state.energyRechargeRate = d.energy_recharge_rate ?? state.energyRechargeRate;
+  state.level              = d.level             ?? state.level;
+  state.boosts             = d.boosts            ?? state.boosts;
+  state.completedTasks     = d.completed_tasks   ?? state.completedTasks;
+  state.dailyStreak        = d.daily_streak      ?? state.dailyStreak;
+  state.lastClaimDate      = d.last_claim_date   ?? state.lastClaimDate;
+  state.lastSpinDate       = d.last_spin_date    ?? state.lastSpinDate;
+  state.referralCount      = d.referral_count    ?? state.referralCount;
+  state.referralEarnings   = d.referral_earnings ?? state.referralEarnings;
+  state.squadId            = d.squad_id          ?? state.squadId;
 }
 
-// ═══════════════════════════════════════
-//  API HELPERS
-// ═══════════════════════════════════════
-async function apiFetch(path, options={}) {
+// ═══ API ═══
+async function apiFetch(path, opts={}) {
   const tg = window.Telegram?.WebApp;
-  const headers = { 'Content-Type':'application/json' };
+  const headers = {'Content-Type':'application/json'};
   if (tg?.initData) headers['X-Telegram-Init-Data'] = tg.initData;
-  return fetch(API_BASE + path, { ...options, headers: { ...headers, ...options.headers } });
+  return fetch(API_BASE+path, {...opts, headers:{...headers,...(opts.headers||{})}});
 }
 
 function scheduleSave() {
@@ -650,60 +466,51 @@ async function saveToServer() {
   try {
     await apiFetch(`/api/user/${state.userId}/update`, {
       method:'POST',
-      body: JSON.stringify({
-        points: state.points, energy: state.energy,
-        boosts: state.boosts, level: state.level,
-        taps_per_tap: state.tapsPerTap,
-        max_energy: state.maxEnergy,
-        energy_recharge_rate: state.energyRechargeRate
+      body:JSON.stringify({
+        points:state.points, energy:Math.floor(state.energy),
+        boosts:state.boosts, level:state.level,
+        taps_per_tap:state.tapsPerTap,
+        max_energy:state.maxEnergy,
+        energy_recharge_rate:state.energyRechargeRate
       })
     });
-  } catch {
-    localStorage.setItem('glowtapUserData_v1', JSON.stringify(state));
-  }
+  } catch { localStorage.setItem('glowtapData', JSON.stringify(state)); }
 }
 
-// ═══════════════════════════════════════
-//  TAP LOGIC
-// ═══════════════════════════════════════
+// ═══ TAP ═══
 function setupTapBtn() {
   const btn = document.getElementById('tapBtn');
-  btn.addEventListener('touchstart', handleTap, { passive:true });
+  btn.addEventListener('touchstart', handleTap, {passive:false});
   btn.addEventListener('mousedown',  handleTap);
 }
 
 function handleTap(e) {
-  e.preventDefault?.();
-  if (state.energy <= 0) { showToast('⚡ Out of energy!'); return; }
-
-  const tap = Math.ceil(state.tapsPerTap);
+  e.preventDefault();
+  if (state.energy < 1) { showToast('⚡ Out of energy! Wait to recharge'); return; }
+  const tap = Math.max(1, Math.ceil(state.tapsPerTap));
   state.points += tap;
   state.energy  = Math.max(0, state.energy - 1);
-
   updateUI();
   scheduleSave();
 
-  // Float text
-  const touches = e.changedTouches || [{clientX: e.clientX, clientY: e.clientY}];
-  for (const t of touches) {
-    spawnFloat(t.clientX, t.clientY, `+${tap}`);
-  }
+  // Float +N text
+  const touches = e.changedTouches || [{clientX:e.clientX, clientY:e.clientY}];
+  for (const t of touches) spawnFloat(t.clientX, t.clientY, `+${tap}`);
 
-  // Ripple animation
-  const btn = document.getElementById('tapBtn');
-  btn.classList.remove('tapped');
-  void btn.offsetWidth;
-  btn.classList.add('tapped');
+  // Crystal bounce
+  const svg = document.getElementById('crystalSvg');
+  svg.style.transform = 'scale(0.88)';
+  setTimeout(()=> svg.style.transform = '', 120);
 }
 
 function spawnFloat(x, y, text) {
   const el = document.createElement('div');
   el.className = 'float-point';
   el.textContent = text;
-  el.style.left = (x - 20) + 'px';
-  el.style.top  = (y - 30) + 'px';
+  el.style.left = (x - 15 + (Math.random()-0.5)*30) + 'px';
+  el.style.top  = (y - 20) + 'px';
   document.body.appendChild(el);
-  setTimeout(()=> el.remove(), 900);
+  setTimeout(()=> el.remove(), 950);
 }
 
 function startEnergyRecharge() {
@@ -716,80 +523,78 @@ function startEnergyRecharge() {
   }, 1000);
 }
 
-// ═══════════════════════════════════════
-//  LEVELS
-// ═══════════════════════════════════════
+// ═══ LEVELS ═══
 function calcLevel(pts) {
   let lv = 1;
-  for (let i=1; i<LEVEL_THRESHOLDS.length; i++) {
-    if (pts >= LEVEL_THRESHOLDS[i]) lv = i+1; else break;
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (pts >= LEVEL_THRESHOLDS[i]) lv = i + 1;
+    else break;
   }
   return Math.min(lv, 20);
 }
 
 function updateLevel() {
-  const lv  = calcLevel(state.points);
-  if (lv !== state.level) {
-    state.level      = lv;
-    state.tapsPerTap = 1 + (lv-1)*0.5;
-    if (lv > state.level) showToast(`🎉 Level Up! Lv ${lv}`);
+  const newLv = calcLevel(state.points);
+  if (newLv > state.level) {
+    state.level      = newLv;
+    state.tapsPerTap = 1 + (newLv - 1) * 0.5;
+    showLevelUp(newLv);
   }
-  const nextThresh = LEVEL_THRESHOLDS[lv] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length-1];
-  const prevThresh = LEVEL_THRESHOLDS[lv-1] ?? 0;
-  const pct = lv>=20 ? 100 : Math.min(100, ((state.points-prevThresh)/(nextThresh-prevThresh))*100);
+  const lv         = state.level;
+  const nextThresh = lv >= 20 ? LEVEL_THRESHOLDS[19] : LEVEL_THRESHOLDS[lv];
+  const prevThresh = LEVEL_THRESHOLDS[lv - 1] || 0;
+  const pct        = lv >= 20 ? 100 : Math.min(100, ((state.points - prevThresh) / (nextThresh - prevThresh)) * 100);
 
   document.getElementById('lvlCurrent').textContent = lv;
   document.getElementById('lvlPts').textContent     = fmtNum(state.points);
-  document.getElementById('lvlNext').textContent    = lv>=20 ? 'MAX' : fmtNum(nextThresh);
-  document.getElementById('lvlBar').style.width     = pct+'%';
+  document.getElementById('lvlNext').textContent    = lv >= 20 ? 'MAX' : fmtNum(nextThresh);
+  document.getElementById('lvlBar').style.width     = pct + '%';
   document.getElementById('userLevel').textContent  = lv;
 }
 
-// ═══════════════════════════════════════
-//  UI UPDATE
-// ═══════════════════════════════════════
-function updateUI() {
-  document.getElementById('pointsDisplay').textContent = fmtNum(state.points);
-  document.getElementById('balanceDisplay').textContent= fmtNum(state.points);
-  document.getElementById('energyCurrent').textContent = Math.floor(state.energy);
-  document.getElementById('energyMax').textContent     = state.maxEnergy;
-  document.getElementById('energyBar').style.width     = (state.energy/state.maxEnergy*100)+'%';
-  document.getElementById('userName').textContent      = state.name || 'Player';
-  document.getElementById('refCount').textContent      = state.referralCount;
-  document.getElementById('refEarnings').textContent   = fmtNum(state.referralEarnings);
+function showLevelUp(lv) {
+  const popup = document.getElementById('levelupPopup');
+  document.getElementById('levelupText').textContent = `You reached Level ${lv}! (+0.5 tap power)`;
+  popup.classList.add('show');
+  setTimeout(()=> popup.classList.remove('show'), 2500);
+}
 
-  // Avatar
+// ═══ UI ═══
+function updateUI() {
+  document.getElementById('pointsDisplay').textContent  = fmtNum(state.points);
+  document.getElementById('balanceDisplay').textContent = fmtNum(state.points);
+  document.getElementById('energyCurrent').textContent  = Math.floor(state.energy);
+  document.getElementById('energyMax').textContent      = state.maxEnergy;
+  document.getElementById('energyBar').style.width      = (Math.floor(state.energy)/state.maxEnergy*100)+'%';
+  document.getElementById('userName').textContent       = state.name || 'Player';
+  document.getElementById('refCount').textContent       = state.referralCount;
+  document.getElementById('refEarnings').textContent    = fmtNum(state.referralEarnings);
+
   const av = document.getElementById('userAvatar');
-  if (state.photoUrl) {
-    av.innerHTML = `<img src="${state.photoUrl}" alt="">`;
-  } else {
-    av.textContent = (state.name||'GT').slice(0,2).toUpperCase();
-  }
+  if (state.photoUrl) av.innerHTML = `<img src="${state.photoUrl}" alt="">`;
+  else av.textContent = (state.name||'GT').slice(0,2).toUpperCase();
 
   updateLevel();
   updateBoostCosts();
 }
 
 function updateBoostCosts() {
-  const mt = state.boosts.multitap || 1;
-  const el = state.boosts.energy_limit || 1;
-  const rs = state.boosts.recharge_speed || 1;
+  const mt = state.boosts.multitap||1;
+  const el = state.boosts.energy_limit||1;
+  const rs = state.boosts.recharge_speed||1;
   document.getElementById('multitapCost').textContent = fmtNum(BOOST_COSTS[Math.min(mt-1,9)]);
   document.getElementById('energyCost').textContent   = fmtNum(BOOST_COSTS[Math.min(el-1,9)]);
   document.getElementById('rechargeCost').textContent = fmtNum(BOOST_COSTS[Math.min(rs-1,9)]);
 }
 
-// ═══════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════
+// ═══ NAV ═══
 function switchPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p=> p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   btn.classList.add('active');
-
-  if (name==='ranks') loadLeaderboard();
-  if (name==='spin')  drawWheel();
+  if (name==='ranks')   loadLeaderboard();
+  if (name==='spin')    { drawWheel(); checkSpinStatus(); }
   if (name==='friends') loadFriends();
 }
 
@@ -798,12 +603,10 @@ function goToSpin() {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-spin').classList.add('active');
   document.querySelectorAll('.nav-btn')[2].classList.add('active');
-  drawWheel();
+  drawWheel(); checkSpinStatus();
 }
 
-// ═══════════════════════════════════════
-//  LEADERBOARD
-// ═══════════════════════════════════════
+// ═══ LEADERBOARD ═══
 async function loadLeaderboard() {
   clearInterval(lbTimer);
   await fetchLB();
@@ -818,12 +621,10 @@ async function fetchLB() {
     ]);
     const lb   = await lbRes.json();
     const rank = await rankRes.json();
-
     document.getElementById('myRank').textContent = '#'+(rank.rank||'—');
     renderLB(lb);
   } catch {
-    document.getElementById('lbList').innerHTML = `
-      <div class="empty-state"><div class="big">⚠️</div>Could not load leaderboard<br><span style="font-size:.72rem">Check your connection</span></div>`;
+    document.getElementById('lbList').innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Could not load leaderboard</div>`;
   }
 }
 
@@ -833,7 +634,7 @@ function renderLB(players) {
     return;
   }
   const html = players.map((p,i)=>{
-    const isSelf = p._id === state.userId;
+    const isSelf  = p._id === state.userId;
     const rankCls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
     const medal   = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
     return `<div class="lb-item ${isSelf?'lb-self':''}">
@@ -846,20 +647,16 @@ function renderLB(players) {
   document.getElementById('lbList').innerHTML = html;
 }
 
-// ═══════════════════════════════════════
-//  DAILY BONUS
-// ═══════════════════════════════════════
+// ═══ DAILY BONUS ═══
 function checkDailyBonus() {
   const today = new Date().toDateString();
-  if (state.lastClaimDate === today) return;
-
-  // Show popup
+  const last  = state.lastClaimDate ? new Date(state.lastClaimDate).toDateString() : null;
+  if (last === today) return;
   const streak = (state.dailyStreak || 0) + 1;
   const day    = Math.min(streak, 7);
-  const reward = DAILY_REWARDS[day-1];
-
-  document.getElementById('streakDay').textContent    = day;
-  document.getElementById('dailyReward').textContent  = '+'+fmtNum(reward);
+  const reward = DAILY_REWARDS[day - 1];
+  document.getElementById('streakDay').textContent   = day;
+  document.getElementById('dailyReward').textContent = '+' + fmtNum(reward);
   renderStreakDays(day);
   document.getElementById('dailyOverlay').classList.remove('hide');
 }
@@ -867,7 +664,7 @@ function checkDailyBonus() {
 function renderStreakDays(currentDay) {
   const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const html  = DAILY_REWARDS.map((r,i)=>{
-    const d = i+1;
+    const d   = i + 1;
     const cls = d < currentDay ? 'done' : d === currentDay ? 'today' : '';
     return `<div class="streak-day ${cls}">
       <span>${names[i]}</span>
@@ -883,76 +680,93 @@ async function claimDaily() {
     const res  = await apiFetch(`/api/daily-claim/${state.userId}`, {method:'POST'});
     const data = await res.json();
     if (data.points_earned) {
-      state.points      += data.points_earned;
-      state.dailyStreak  = data.streak || state.dailyStreak;
-      state.lastClaimDate= new Date().toDateString();
+      state.points       += data.points_earned;
+      state.dailyStreak   = data.streak || state.dailyStreak;
+      state.lastClaimDate = new Date().toISOString();
       updateUI();
       showToast(`🌟 +${fmtNum(data.points_earned)} Daily Bonus!`);
     }
   } catch {
-    // Offline fallback
     const streak = (state.dailyStreak||0)+1;
     const reward = DAILY_REWARDS[Math.min(streak-1,6)];
-    state.points      += reward;
-    state.dailyStreak  = streak;
-    state.lastClaimDate= new Date().toDateString();
+    state.points       += reward;
+    state.dailyStreak   = streak;
+    state.lastClaimDate = new Date().toISOString();
     updateUI();
+    scheduleSave();
     showToast(`🌟 +${fmtNum(reward)} Daily Bonus!`);
   }
 }
 
-// ═══════════════════════════════════════
-//  SPIN WHEEL
-// ═══════════════════════════════════════
-function drawWheel(highlightIdx = -1) {
+// ═══ SPIN WHEEL ═══
+const COLORS = ['#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a'];
+const HL     = ['#00f2ff','#ff00f2','#00f2ff','#ffd700','#ff4466','#00ff9d','#00f2ff','#ff00f2'];
+
+function drawWheel(highlightIdx=-1, rotOffset=0) {
   const canvas = document.getElementById('spinCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = 260, cx = 130, cy = 130, r = 120;
+  const cx = 130, cy = 130, r = 120;
   const seg = SPIN_SEGMENTS.length;
   const arc = (Math.PI*2)/seg;
-  const colors = ['#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a','#1a0a3a','#0a1a3a'];
-  const hl     = ['#00f2ff','#ff00f2','#00f2ff','#ffd700','#ff4466','#00ff9d','#00f2ff','#ff00f2'];
-
-  ctx.clearRect(0,0,W,W);
+  ctx.clearRect(0,0,260,260);
 
   SPIN_SEGMENTS.forEach((val,i)=>{
-    const start = arc*i - Math.PI/2;
+    const start = arc*i - Math.PI/2 + rotOffset;
     const end   = start + arc;
     ctx.beginPath(); ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,start,end);
     ctx.closePath();
-    ctx.fillStyle = i===highlightIdx ? hl[i] : colors[i];
+    ctx.fillStyle = i===highlightIdx ? HL[i] : COLORS[i];
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,242,255,0.3)'; ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.strokeStyle='rgba(0,242,255,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
 
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+arc/2+rotOffset*0);
     // label
+    const mid = start + arc/2;
+    const lx  = Math.cos(mid)*(r-30);
+    const ly  = Math.sin(mid)*(r-30);
+    ctx.restore();
     ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(start + arc/2);
-    ctx.textAlign='right'; ctx.fillStyle=i===highlightIdx?'#000':'#e0e8ff';
-    ctx.font = `bold ${val>=1000?'11':'13'}px Orbitron,monospace`;
-    ctx.fillText(val===0?'😢':val>=1000?(val/1000)+'K':val+'', r-10, 5);
+    ctx.translate(cx + Math.cos(start+arc/2)*( r-28), cy + Math.sin(start+arc/2)*(r-28));
+    ctx.rotate(start+arc/2 + Math.PI/2);
+    ctx.textAlign='center'; ctx.fillStyle=i===highlightIdx?'#000':'#e0e8ff';
+    ctx.font=`bold ${val>=1000?'10':'12'}px Orbitron,monospace`;
+    ctx.fillText(val===0?'😢':val>=1000?(val/1000)+'K':val+'', 0, 4);
     ctx.restore();
   });
 
-  // Center circle
+  // Center
   const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,28);
   grad.addColorStop(0,'#1a0a3a'); grad.addColorStop(1,'#0d0a1f');
   ctx.beginPath(); ctx.arc(cx,cy,28,0,Math.PI*2);
   ctx.fillStyle=grad; ctx.fill();
   ctx.strokeStyle='rgba(0,242,255,0.5)'; ctx.lineWidth=2; ctx.stroke();
-  ctx.fillStyle='#00f2ff'; ctx.font='bold 10px Orbitron,monospace'; ctx.textAlign='center';
-  ctx.fillText('GTAP',cx,cy+4);
+  ctx.fillStyle='#00f2ff'; ctx.font='bold 9px Orbitron,monospace'; ctx.textAlign='center';
+  ctx.fillText('GTAP',cx,cy+3);
+}
+
+function checkSpinStatus() {
+  const today = new Date().toDateString();
+  const last  = state.lastSpinDate ? new Date(state.lastSpinDate).toDateString() : null;
+  const btn   = document.getElementById('spinBtn');
+  const sub   = document.getElementById('spinSubtitle');
+  if (last === today) {
+    btn.disabled = true;
+    btn.textContent = '✅ Come back tomorrow!';
+    sub.textContent = 'Next spin available tomorrow';
+  } else {
+    btn.disabled = false;
+    btn.textContent = '🎰 SPIN';
+    sub.textContent = '1 free spin per day';
+  }
 }
 
 async function doSpin() {
   if (spinning) return;
-
-  // Check if already spun today
   const today = new Date().toDateString();
-  if (state.lastSpinDate === today) { showToast('🎰 Spin again tomorrow!'); return; }
+  const last  = state.lastSpinDate ? new Date(state.lastSpinDate).toDateString() : null;
+  if (last === today) { showToast('🎰 Come back tomorrow!'); return; }
 
   spinning = true;
   document.getElementById('spinBtn').disabled = true;
@@ -964,56 +778,52 @@ async function doSpin() {
     const data = await res.json();
     reward = data.reward ?? 0;
     segIdx = SPIN_SEGMENTS.indexOf(reward);
-    if (segIdx<0) segIdx=0;
+    if (segIdx < 0) segIdx = 0;
   } catch {
-    segIdx = Math.floor(Math.random()*SPIN_SEGMENTS.length);
+    segIdx = random_weighted();
     reward = SPIN_SEGMENTS[segIdx];
   }
 
-  // Animate spin
-  const canvas   = document.getElementById('spinCanvas');
+  // The wheel stops so pointer (top = -PI/2) points at segIdx
   const seg      = SPIN_SEGMENTS.length;
   const arc      = (Math.PI*2)/seg;
-  const totalRot = Math.PI*2 * (4 + Math.random()) + (arc*segIdx);
-  const duration = 3500;
-  const start    = performance.now();
+  // target rotation: segment segIdx center should be at top
+  const targetAngle = -(arc * segIdx + arc/2) + Math.PI*2*5; // 5 full rotations
+  const duration = 4000;
+  const startTime = performance.now();
 
   function animate(now) {
-    const elapsed = now - start;
-    const t       = Math.min(elapsed/duration,1);
-    const ease    = 1 - Math.pow(1-t,4);
-    const angle   = totalRot * ease;
-    const curSeg  = Math.floor(((angle % (Math.PI*2)) / arc + seg) % seg);
-
-    const ctx = canvas.getContext('2d');
-    ctx.save(); ctx.translate(130,130); ctx.rotate(-angle); ctx.translate(-130,-130);
-    drawWheel(-1);
-    ctx.restore();
-
-    if (t<1) { requestAnimationFrame(animate); }
-    else {
-      drawWheel(segIdx);
-      spinning = false;
-      state.lastSpinDate = today;
-      if (reward > 0) {
-        state.points += reward;
-        updateUI();
-        scheduleSave();
-        document.getElementById('spinResult').textContent = `🎉 You won ${fmtNum(reward)} $GTAP!`;
-        showToast(`🎰 +${fmtNum(reward)} from Lucky Spin!`);
-      } else {
-        document.getElementById('spinResult').textContent = '😢 Better luck next time!';
-      }
-      document.getElementById('spinBtn').disabled = false;
-      document.getElementById('spinBtn').textContent = '✅ Come back tomorrow';
+    const t    = Math.min((now - startTime) / duration, 1);
+    const ease = 1 - Math.pow(1-t, 4);
+    const rot  = targetAngle * ease;
+    drawWheel(-1, rot);
+    if (t < 1) { requestAnimationFrame(animate); return; }
+    // final — highlight winner
+    drawWheel(segIdx, targetAngle);
+    spinning = false;
+    state.lastSpinDate = new Date().toISOString();
+    if (reward > 0) {
+      state.points += reward;
+      updateUI();
+      scheduleSave();
+      document.getElementById('spinResult').textContent = `🎉 You won ${fmtNum(reward)} $GTAP!`;
+      showToast(`🎰 +${fmtNum(reward)} from Lucky Spin!`);
+    } else {
+      document.getElementById('spinResult').textContent = '😢 Better luck next time!';
     }
+    checkSpinStatus();
   }
   requestAnimationFrame(animate);
 }
 
-// ═══════════════════════════════════════
-//  TASKS
-// ═══════════════════════════════════════
+function random_weighted() {
+  const total = SPIN_WEIGHTS.reduce((a,b)=>a+b,0);
+  let r = Math.random()*total;
+  for (let i=0;i<SPIN_WEIGHTS.length;i++) { r-=SPIN_WEIGHTS[i]; if(r<=0) return i; }
+  return 0;
+}
+
+// ═══ TASKS ═══
 function renderTasks() {
   const html = TASKS.map(t=>{
     const done = state.completedTasks.includes(t.id);
@@ -1034,46 +844,39 @@ function renderTasks() {
 
 async function completeTask(taskId, url) {
   if (url) window.open(url,'_blank');
-
   try {
     const res  = await apiFetch(`/api/task/complete/${state.userId}`, {
-      method:'POST', body: JSON.stringify({task_id:taskId})
+      method:'POST', body:JSON.stringify({task_id:taskId})
     });
     const data = await res.json();
     if (data.points_earned) {
       state.points += data.points_earned;
       if (!state.completedTasks.includes(taskId)) state.completedTasks.push(taskId);
-      updateUI();
-      renderTasks();
-      showToast(`✅ Task complete! +${fmtNum(data.points_earned)}`);
+      updateUI(); renderTasks();
+      showToast(`✅ +${fmtNum(data.points_earned)} $GTAP!`);
     }
   } catch {
     const task = TASKS.find(t=>t.id===taskId);
     if (task && !state.completedTasks.includes(taskId)) {
       state.points += task.reward;
       state.completedTasks.push(taskId);
-      updateUI();
-      renderTasks();
+      updateUI(); renderTasks();
       showToast(`✅ +${fmtNum(task.reward)} $GTAP!`);
       scheduleSave();
     }
   }
 }
 
-// ═══════════════════════════════════════
-//  FRIENDS / REFERRALS
-// ═══════════════════════════════════════
+// ═══ FRIENDS ═══
 async function loadFriends() {
   try {
-    const res   = await apiFetch(`/api/referrals/${state.userId}`);
-    const data  = await res.json();
+    const res  = await apiFetch(`/api/referrals/${state.userId}`);
+    const data = await res.json();
     state.referralCount    = data.referral_count    || state.referralCount;
     state.referralEarnings = data.referral_earnings || state.referralEarnings;
     updateUI();
-    renderFriendsList(data.friends || []);
+    renderFriendsList(data.friends||[]);
   } catch {}
-
-  // Load squad
   if (state.squadId) loadSquad();
 }
 
@@ -1090,39 +893,50 @@ function renderFriendsList(friends) {
 
 function copyRefLink() {
   const link = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
-  navigator.clipboard?.writeText(link).then(()=> showToast('📋 Link copied!'));
+  try {
+    navigator.clipboard.writeText(link).then(()=>showToast('📋 Link copied!'));
+  } catch {
+    // Fallback for Telegram WebApp
+    const el = document.createElement('textarea');
+    el.value = link; el.style.position='fixed'; el.style.opacity='0';
+    document.body.appendChild(el); el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('📋 Link copied!');
+  }
 }
 
 function shareLink() {
   const link = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
-  const text = `🌟 Join me on GlowTap and earn $GTAP tokens! Tap the crystal and build your fortune!\n${link}`;
-  window.Telegram?.WebApp?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  const text = `🌟 Join me on GlowTap and earn $GTAP tokens!\n${link}`;
+  const tg   = window.Telegram?.WebApp;
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  } else {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`,'_blank');
+  }
 }
 
-// ═══════════════════════════════════════
-//  SQUADS
-// ═══════════════════════════════════════
+// ═══ SQUADS ═══
 async function createSquad() {
   const name = document.getElementById('squadNameInput').value.trim();
   if (!name) { showToast('Enter squad name'); return; }
   try {
-    const res  = await apiFetch('/api/squad/create', {
-      method:'POST', body: JSON.stringify({user_id:state.userId, name})
-    });
+    const res  = await apiFetch('/api/squad/create', {method:'POST', body:JSON.stringify({user_id:state.userId,name})});
     const data = await res.json();
-    if (data.squad_id) { state.squadId = data.squad_id; loadSquad(); showToast('🛡️ Squad created!'); }
-  } catch { showToast('⚠️ API not available yet'); }
+    if (data.squad_id) { state.squadId=data.squad_id; loadSquad(); showToast('🛡️ Squad created!'); }
+    else showToast('⚠️ '+( data.detail||'Error'));
+  } catch { showToast('⚠️ Could not create squad'); }
 }
 
 async function joinSquad() {
   const squadId = document.getElementById('squadIdInput').value.trim();
   if (!squadId) { showToast('Enter squad ID'); return; }
   try {
-    const res  = await apiFetch('/api/squad/join', {
-      method:'POST', body: JSON.stringify({user_id:state.userId, squad_id:squadId})
-    });
+    const res  = await apiFetch('/api/squad/join', {method:'POST', body:JSON.stringify({user_id:state.userId,squad_id:squadId})});
     const data = await res.json();
-    if (data.squad_id) { state.squadId = data.squad_id; loadSquad(); showToast('🛡️ Squad joined!'); }
+    if (data.squad_id) { state.squadId=data.squad_id; loadSquad(); showToast('🛡️ Squad joined!'); }
+    else showToast('⚠️ '+(data.detail||'Squad not found'));
   } catch { showToast('⚠️ Squad not found'); }
 }
 
@@ -1136,10 +950,10 @@ async function loadSquad() {
 
 function renderSquad(squad) {
   const el = document.getElementById('squadInfo');
-  el.style.display = 'block';
-  el.innerHTML = `
+  el.style.display='block';
+  el.innerHTML=`
     <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;margin-bottom:8px;color:var(--cyan)">${escHtml(squad.name||'My Squad')}</div>
-    <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px">ID: ${squad._id||state.squadId}</div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">ID: <b style="color:var(--cyan)">${squad._id||state.squadId}</b> (share to invite)</div>
     <div style="font-size:.78rem;margin-bottom:8px;color:var(--muted)">Members: ${(squad.members||[]).length}/50 · Total: ${fmtNum(squad.total_points||0)} pts</div>
     ${(squad.members||[]).slice(0,8).map(m=>`
       <div class="squad-member">
@@ -1149,47 +963,73 @@ function renderSquad(squad) {
       </div>`).join('')}`;
 }
 
-// ═══════════════════════════════════════
-//  BOOSTS
-// ═══════════════════════════════════════
+// ═══ BOOSTS (Custom modal — no confirm()) ═══
 function openBoostModal(type) {
-  const lvl  = state.boosts[type] || 1;
-  const cost = BOOST_COSTS[Math.min(lvl-1,9)];
-  const names = {multitap:'MultiTap (+0.5 tap/level)', energy_limit:'Energy Limit (+500/level)', recharge_speed:'Recharge Speed (+1/sec/level)'};
-  if (state.points < cost) { showToast(`Need ${fmtNum(cost)} pts`); return; }
-  if (confirm(`Upgrade ${names[type]} to Lv ${lvl+1} for ${fmtNum(cost)} pts?`)) buyBoost(type);
+  const lvl   = state.boosts[type]||1;
+  const cost  = BOOST_COSTS[Math.min(lvl-1,9)];
+  const names = {
+    multitap:'MultiTap',
+    energy_limit:'Energy Limit',
+    recharge_speed:'Recharge Speed'
+  };
+  const descs = {
+    multitap:`Level ${lvl} → ${lvl+1}\nEach tap earns +${(1+(lvl)*0.5).toFixed(1)} pts`,
+    energy_limit:`Level ${lvl} → ${lvl+1}\nMax energy: ${500+lvl*500} → ${500+(lvl+1)*500}`,
+    recharge_speed:`Level ${lvl} → ${lvl+1}\nRecharge: ${lvl}/sec → ${lvl+1}/sec`
+  };
+
+  pendingBoostType = type;
+  document.getElementById('boostModalTitle').textContent   = '⚡ Upgrade '+names[type];
+  document.getElementById('boostModalDesc').textContent    = descs[type];
+  document.getElementById('boostModalCost').textContent    = fmtNum(cost)+' pts';
+  document.getElementById('boostModalBalance').textContent = `Your balance: ${fmtNum(state.points)} pts`;
+
+  const canAfford = state.points >= cost;
+  const confirmBtn = document.getElementById('boostConfirmBtn');
+  confirmBtn.disabled = !canAfford;
+  confirmBtn.style.opacity = canAfford ? '1' : '0.4';
+  if (!canAfford) document.getElementById('boostModalDesc').textContent = '❌ Not enough points!\n'+descs[type];
+
+  document.getElementById('boostOverlay').classList.remove('hide');
+}
+
+function closeBoostModal() {
+  document.getElementById('boostOverlay').classList.add('hide');
+  pendingBoostType = null;
+}
+
+async function confirmBoost() {
+  if (!pendingBoostType) return;
+  const type = pendingBoostType;
+  closeBoostModal();
+  await buyBoost(type);
 }
 
 async function buyBoost(type) {
-  const lvl  = state.boosts[type] || 1;
+  const lvl  = state.boosts[type]||1;
   const cost = BOOST_COSTS[Math.min(lvl-1,9)];
-  state.points -= cost;
+  if (state.points < cost) { showToast(`Need ${fmtNum(cost)} pts`); return; }
+
+  state.points      -= cost;
   state.boosts[type] = lvl+1;
+  if (type==='multitap')       state.tapsPerTap         = 1 + (state.boosts.multitap-1)*0.5;
+  if (type==='energy_limit')  { state.maxEnergy = 500+(state.boosts.energy_limit-1)*500; state.energy=Math.min(state.energy,state.maxEnergy); }
+  if (type==='recharge_speed') state.energyRechargeRate = state.boosts.recharge_speed;
 
-  if (type==='multitap')      state.tapsPerTap       = 1 + (state.boosts.multitap-1)*0.5;
-  if (type==='energy_limit')  { state.maxEnergy = 500 + (state.boosts.energy_limit-1)*500; state.energy = Math.min(state.energy, state.maxEnergy); }
-  if (type==='recharge_speed') state.energyRechargeRate = 1 + (state.boosts.recharge_speed-1);
-
-  updateUI();
-  scheduleSave();
-  showToast(`✅ Boost upgraded!`);
-
+  updateUI(); scheduleSave();
+  showToast(`✅ Boost upgraded to Lv ${lvl+1}!`);
   try {
-    await apiFetch(`/api/user/${state.userId}/boost`, {
-      method:'POST', body: JSON.stringify({boost_type:type})
-    });
+    await apiFetch(`/api/user/${state.userId}/boost`, {method:'POST', body:JSON.stringify({boost_type:type})});
   } catch {}
 }
 
-// ═══════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════
+// ═══ UTILS ═══
 function fmtNum(n) {
   n = Number(n)||0;
   if (n>=1e9)  return (n/1e9).toFixed(1)+'B';
   if (n>=1e6)  return (n/1e6).toFixed(1)+'M';
   if (n>=1000) return (n/1000).toFixed(1)+'K';
-  return n.toLocaleString();
+  return Math.floor(n).toLocaleString();
 }
 
 function escHtml(s) {
@@ -1200,14 +1040,12 @@ function showToast(msg) {
   const old = document.querySelector('.toast');
   if (old) old.remove();
   const t = document.createElement('div');
-  t.className = 'toast'; t.textContent = msg;
+  t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=> t.remove(), 2100);
+  setTimeout(()=>t.remove(), 2100);
 }
 
-// ═══════════════════════════════════════
-//  START
-// ═══════════════════════════════════════
+// ═══ START ═══
 init();
 </script>
 </body>
