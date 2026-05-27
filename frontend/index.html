@@ -497,8 +497,10 @@ async function flushTaps() {
   const count = tapBatch;
   tapBatch = 0;
   try {
-    // Server calculates points based on user's taps_per_tap stat
-    await apiFetch(`/api/user/${state.userId}/tap`, {method:'POST'});
+    // BUG FIX: Send tap count so server credits all batched taps, not just 1
+    for (let i = 0; i < count; i++) {
+      await apiFetch(`/api/user/${state.userId}/tap`, {method:'POST'});
+    }
   } catch {
     // Keep local state — will sync on next saveToServer
   }
@@ -640,7 +642,6 @@ function switchPage(name, btn) {
   btn.classList.add('active');
   if (name==='ranks')   loadLeaderboard();
   if (name==='spin')    { drawWheel(); checkSpinStatus(); }
-  if (name==='friends') { loadFriends(); }  // BUG FIX #3: Tab switch pe fresh load
   if (name==='friends') loadFriends();
 }
 
@@ -728,7 +729,6 @@ function renderStreakDays(currentDay) {
 }
 
 async function claimDaily() {
-  // BUG FIX #8: Pehle lastClaimDate mark karo taaki double-click se double reward na mile
   const today = new Date().toISOString().slice(0,10);
   if (state.lastClaimDate && state.lastClaimDate.slice(0,10) === today) {
     document.getElementById('dailyOverlay').classList.add('hide');
@@ -741,23 +741,25 @@ async function claimDaily() {
   try {
     const res  = await apiFetch(`/api/daily-claim/${state.userId}`, {method:'POST'});
     const data = await res.json();
-    if (data.points_earned) {
-      // BUG FIX #8: Server se actual points lo — no local calculation
+    if (res.ok && data.points_earned) {
       state.points      += data.points_earned;
       state.dailyStreak  = data.streak || state.dailyStreak;
       updateUI();
       showToast(`🌟 +${fmtNum(data.points_earned)} Daily Bonus!`);
+    } else if (!res.ok) {
+      // BUG FIX: Server rejected (e.g. already claimed on another device) —
+      // revert optimistic claim date so UI stays consistent; don't give offline reward
+      if (data.detail && data.detail.includes('Already')) {
+        showToast('✅ Already claimed today!');
+      } else {
+        showToast('⚠️ Could not claim. Try again!');
+        state.lastClaimDate = null; // allow retry
+      }
     }
   } catch {
-    // BUG FIX #8: API fail hone pe bhi offline reward do (ek baar)
-    // state.lastClaimDate pehle se set ho gayi — double-credit nahi hoga
-    const streak = (state.dailyStreak||0)+1;
-    const reward = DAILY_REWARDS[Math.min(streak-1,6)];
-    state.points      += reward;
-    state.dailyStreak  = streak;
-    updateUI();
-    scheduleSave();
-    showToast(`🌟 +${fmtNum(reward)} Daily Bonus!`);
+    // Network error — revert so user can retry when back online
+    state.lastClaimDate = null;
+    showToast('⚠️ Network error. Try again when online!');
   }
 }
 
@@ -828,8 +830,9 @@ function checkSpinStatus() {
 
 async function doSpin() {
   if (spinning) return;
-  const today = new Date().toDateString();
-  const last  = state.lastSpinDate ? new Date(state.lastSpinDate).toDateString() : null;
+  // BUG FIX: Use ISO date format (YYYY-MM-DD) consistent with checkSpinStatus and server
+  const today = new Date().toISOString().slice(0,10);
+  const last  = state.lastSpinDate ? state.lastSpinDate.slice(0,10) : null;
   if (last === today) { showToast('🎰 Come back tomorrow!'); return; }
 
   spinning = true;
