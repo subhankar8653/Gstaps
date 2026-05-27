@@ -144,11 +144,15 @@
   .stat-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
   .stat-num{font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--cyan);font-weight:700}
   .stat-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
-  /* Level up popup */
-  .levelup-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--bg2);border:2px solid var(--gold);border-radius:20px;padding:24px 32px;text-align:center;z-index:9999;box-shadow:0 0 60px rgba(255,215,0,0.4);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
-  .levelup-popup.show{transform:translate(-50%,-50%) scale(1)}
-  .levelup-popup h3{font-family:'Orbitron',sans-serif;color:var(--gold);font-size:1.4rem;margin-bottom:8px}
-  .levelup-popup p{color:var(--muted);font-size:.85rem}
+  /* MERGE GAME */
+  .mcell{aspect-ratio:1;background:rgba(255,255,255,0.04);border:1px solid rgba(0,242,255,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(17px,4.5vw,23px);cursor:pointer;transition:all .12s;user-select:none;-webkit-user-select:none}
+  .mcell:active{transform:scale(.93)}
+  .mcell.msel{background:rgba(0,242,255,0.18);border:2px solid var(--cyan);box-shadow:0 0 12px rgba(0,242,255,0.45);transform:scale(1.07)}
+  .mcell.mlocked{background:rgba(0,0,0,.35);cursor:not-allowed;opacity:.7}
+  .mcell.mflash{animation:mFlash .4s ease}
+  @keyframes mFlash{0%{transform:scale(1)}35%{transform:scale(1.45);filter:brightness(2.2) saturate(2)}65%{transform:scale(.92)}100%{transform:scale(1)}}
+  .merge-float{position:fixed;pointer-events:none;z-index:2000;font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,.8);animation:mfloat 1.1s ease forwards}
+  @keyframes mfloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.2)}}
 </style>
 </head>
 <body>
@@ -268,8 +272,8 @@
         <span>⚡</span><span>Recharge</span>
         <span class="boost-cost" id="rechargeCost">2K</span>
       </div>
-      <div class="boost-chip" onclick="goToSpin()">
-        <span>🎰</span><span>Spin</span>
+      <div class="boost-chip" onclick="goToGame()">
+        <span>🎮</span><span>Game</span>
         <span class="boost-cost">FREE</span>
       </div>
     </div>
@@ -288,17 +292,30 @@
     </div>
   </div>
 
-  <!-- SPIN PAGE -->
-  <div class="page" id="page-spin" style="align-items:center">
-    <div class="section-title" style="width:100%;text-align:center">🎰 Lucky Spin</div>
-    <div style="color:var(--muted);font-size:.8rem;text-align:center;margin-bottom:12px" id="spinSubtitle">1 free spin per day</div>
-    <div class="spin-container">
-      <div class="wheel-wrap">
-        <div class="wheel-pointer"></div>
-        <canvas id="spinCanvas" width="260" height="260"></canvas>
+  <!-- GAME PAGE (Merge Game - replaces Spin) -->
+  <div class="page" id="page-game" style="align-items:center;padding:0 12px 12px">
+    <div class="section-title" style="width:100%;text-align:center">✨ Glow Fest - Merge Game</div>
+
+    <!-- Score row -->
+    <div style="width:100%;background:linear-gradient(90deg,rgba(255,215,0,0.12),rgba(255,165,0,0.07),rgba(255,215,0,0.12));border:1px solid rgba(255,215,0,0.35);border-radius:14px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">GLOW COINS</div>
+        <div style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:18px;filter:drop-shadow(0 0 6px rgba(255,215,0,0.5))" id="mergeCoinsDisplay">0 ✦</div>
       </div>
-      <button class="spin-btn" id="spinBtn" onclick="doSpin()">🎰 SPIN</button>
-      <div class="spin-result" id="spinResult"></div>
+      <div style="text-align:right">
+        <div style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">MERGES</div>
+        <div style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:18px" id="mergeCountDisplay">0</div>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(0,242,255,0.12);border-radius:18px;padding:10px;margin-bottom:10px">
+      <div id="mergeGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px"></div>
+    </div>
+
+    <!-- Hint -->
+    <div style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(0,242,255,0.12);border-radius:12px;padding:10px 14px;text-align:center;color:rgba(255,255,255,0.65);font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase">
+      ✨ Same emoji select karo → Merge → Glow Coins!
     </div>
   </div>
 
@@ -349,9 +366,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
       Ranks
     </button>
-    <button class="nav-btn" onclick="switchPage('spin',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      Spin
+    <button class="nav-btn" onclick="switchPage('game',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="12" y1="11" x2="12" y2="17"/></svg>
+      Game
     </button>
     <button class="nav-btn" onclick="switchPage('tasks',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -444,7 +461,6 @@ async function init() {
   startEnergyRecharge();
   renderTasks();
   setupTapBtn();
-  drawWheel();
 
   // BUG FIX #1: Daily bonus sirf tab dikhao jab state sahi load ho gayi ho
   // Agar DB load hua to server ki lastClaimDate trust karo
@@ -641,16 +657,16 @@ function switchPage(name, btn) {
   document.getElementById('page-'+name).classList.add('active');
   btn.classList.add('active');
   if (name==='ranks')   loadLeaderboard();
-  if (name==='spin')    { drawWheel(); checkSpinStatus(); }
+  if (name==='game')    { if (!mergeInitialized) initMergeGame(); }
   if (name==='friends') loadFriends();
 }
 
-function goToSpin() {
+function goToGame() {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-spin').classList.add('active');
+  document.getElementById('page-game').classList.add('active');
   document.querySelectorAll('.nav-btn')[2].classList.add('active');
-  drawWheel(); checkSpinStatus();
+  if (!mergeInitialized) initMergeGame();
 }
 
 // ═══ LEADERBOARD ═══
@@ -1134,6 +1150,94 @@ function showToast(msg) {
   t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 2100);
+}
+
+
+// ═══ MERGE GAME ═══
+const MCHAIN  = ['🌱','🌿','🍀','🌸','🌻','🌟','💫','✨','🌈','🎆'];
+const MREWARD = [5,10,20,35,55,80,110,150,200,300];
+const MROWS=5, MCOLS=6;
+let mgrid=[], mSel=null, mMerges=0, mCoins=0, mergeInitialized=false;
+
+function initMergeGame() {
+  mergeInitialized = true;
+  mgrid=[];
+  for(let r=0;r<MROWS;r++){
+    mgrid[r]=[];
+    for(let c=0;c<MCOLS;c++){
+      const locked=r===MROWS-1;
+      const has=!locked&&Math.random()<0.55;
+      mgrid[r][c]={locked,item:locked?null:(has?MCHAIN[Math.floor(Math.random()*4)]:null),lv:locked?0:(has?Math.floor(Math.random()*4):-1)};
+    }
+  }
+  renderMerge();
+}
+
+function renderMerge(){
+  const el=document.getElementById('mergeGrid');
+  el.innerHTML='';
+  for(let r=0;r<MROWS;r++) for(let c=0;c<MCOLS;c++){
+    const d=mgrid[r][c],cell=document.createElement('div');
+    cell.className='mcell';
+    if(d.locked){cell.classList.add('mlocked');cell.textContent='🔒';}
+    else cell.textContent=d.item||'';
+    cell.dataset.r=r;cell.dataset.c=c;
+    cell.addEventListener('click',()=>onMClick(r,c));
+    el.appendChild(cell);
+  }
+}
+
+function getMC(r,c){return document.querySelector(`.mcell[data-r="${r}"][data-c="${c}"]`);}
+
+function onMClick(r,c){
+  const d=mgrid[r][c];
+  if(d.locked||!d.item){mSel=null;renderMerge();return;}
+  if(!mSel){mSel={r,c};getMC(r,c)?.classList.add('msel');return;}
+  const prev=mSel;mSel=null;
+  if(prev.r===r&&prev.c===c){renderMerge();return;}
+  const pd=mgrid[prev.r][prev.c],cd=mgrid[r][c];
+  if(pd.item===cd.item) doMerge(prev.r,prev.c,r,c);
+  else{
+    [mgrid[prev.r][prev.c].item,mgrid[r][c].item]=[cd.item,pd.item];
+    [mgrid[prev.r][prev.c].lv,mgrid[r][c].lv]=[cd.lv,pd.lv];
+    renderMerge();
+  }
+}
+
+function doMerge(r1,c1,r2,c2){
+  const lv=mgrid[r1][c1].lv,nlv=Math.min(lv+1,MCHAIN.length-1),earned=MREWARD[lv]||5;
+  mgrid[r1][c1]={locked:false,item:null,lv:-1};
+  mgrid[r2][c2]={locked:false,item:MCHAIN[nlv],lv:nlv};
+  mCoins+=earned;mMerges++;
+  // Also add to main points
+  state.points+=earned;updateUI();scheduleSave();
+  document.getElementById('mergeCoinsDisplay').textContent=mCoins+' ✦';
+  document.getElementById('mergeCountDisplay').textContent=mMerges;
+  renderMerge();
+  const cell=getMC(r2,c2);
+  if(cell){cell.classList.add('mflash');setTimeout(()=>cell.classList.remove('mflash'),450);}
+  spawnMFloat(r2,c2,earned);
+  let empty=0;
+  for(let r=0;r<MROWS;r++) for(let c=0;c<MCOLS;c++) if(!mgrid[r][c].locked&&!mgrid[r][c].item) empty++;
+  if(empty>10) refillMerge();
+}
+
+function spawnMFloat(r,c,pts){
+  const cell=getMC(r,c);if(!cell)return;
+  const rect=cell.getBoundingClientRect();
+  const div=document.createElement('div');
+  div.className='merge-float';div.textContent='+'+pts+' ✦';
+  div.style.cssText=`left:${rect.left+rect.width/2-25}px;top:${rect.top-5}px;`;
+  document.body.appendChild(div);setTimeout(()=>div.remove(),1100);
+}
+
+function refillMerge(){
+  for(let r=0;r<MROWS-1;r++) for(let c=0;c<MCOLS;c++)
+    if(!mgrid[r][c].item&&!mgrid[r][c].locked&&Math.random()<0.4){
+      const lv=Math.floor(Math.random()*3);
+      mgrid[r][c]={locked:false,item:MCHAIN[lv],lv};
+    }
+  renderMerge();
 }
 
 // ═══ START ═══
