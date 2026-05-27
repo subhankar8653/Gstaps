@@ -2,12 +2,9 @@ from fastapi import APIRouter, HTTPException, Header, Request
 from database import db
 from models import TaskComplete, ReferralApply
 from datetime import datetime, date
+from auth import get_verified_user_id
 import random
-import hashlib
-import hmac
 import os
-import json
-from urllib.parse import unquote
 
 router = APIRouter()
 
@@ -22,54 +19,6 @@ TASK_REWARDS = {
     "invite3":  5000,
     "play7":    8000,
 }
-
-# ── TELEGRAM INIT DATA VERIFICATION ──────────────────────────
-def verify_telegram_init_data(init_data: str) -> dict | None:
-    """
-    Verifies Telegram WebApp initData using HMAC-SHA256.
-    Returns parsed user dict if valid, None if invalid.
-    """
-    bot_token = os.getenv("BOT_TOKEN", "")
-    if not bot_token or not init_data:
-        return None
-
-    try:
-        # Parse the query string
-        params = {}
-        for part in init_data.split("&"):
-            if "=" in part:
-                k, v = part.split("=", 1)
-                params[unquote(k)] = unquote(v)
-
-        received_hash = params.pop("hash", None)
-        if not received_hash:
-            return None
-
-        # Build data-check-string: sorted key=value pairs joined by \n
-        data_check = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
-
-        # HMAC key = HMAC-SHA256("WebAppData", bot_token)
-        secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
-        computed   = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
-
-        if not hmac.compare_digest(computed, received_hash):
-            return None
-
-        # Return parsed user
-        user_json = params.get("user", "{}")
-        return json.loads(user_json)
-    except Exception:
-        return None
-
-
-def get_verified_user_id(x_telegram_init_data: str | None) -> str | None:
-    """Returns verified user_id string or None."""
-    if not x_telegram_init_data:
-        return None
-    user = verify_telegram_init_data(x_telegram_init_data)
-    if user and user.get("id"):
-        return str(user["id"])
-    return None
 
 
 # ── DAILY CLAIM ──────────────────────────────────────────────

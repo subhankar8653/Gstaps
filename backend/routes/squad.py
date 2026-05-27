@@ -58,6 +58,21 @@ async def get_squad(squad_id: str):
     squad = await db.squads.find_one({"_id": squad_id})
     if not squad:
         raise HTTPException(404, "Squad not found")
+
+    # BUG FIX: total_points is stale (members earn points after joining).
+    # Recalculate live from member user_ids for accurate display.
+    member_ids = [m["user_id"] for m in squad.get("members", [])]
+    if member_ids:
+        pipeline = [
+            {"$match": {"_id": {"$in": member_ids}}},
+            {"$group": {"_id": None, "total": {"$sum": "$points"},
+                        "members": {"$push": {"user_id": "$_id", "name": "$name", "points": "$points"}}}}
+        ]
+        agg = await db.users.aggregate(pipeline).to_list(1)
+        if agg:
+            squad["total_points"] = agg[0]["total"]
+            squad["members"]      = agg[0]["members"]
+
     squad["_id"] = squad_id
     return squad
 

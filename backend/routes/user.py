@@ -2,15 +2,13 @@ from fastapi import APIRouter, HTTPException, Header
 from database import db
 from models import UserUpdate, BoostRequest
 from datetime import datetime
-import os, hashlib, hmac, json
-from urllib.parse import unquote
+from auth import get_verified_user_id
 
 router = APIRouter()
 
 BOOST_COSTS = [2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 512000, 1000000]
 
-# BUG FIX #7: Points update mein allowed fields — user apne aap se
-# arbitrary points set nahi kar sakta. Sirf game-safe fields allowed.
+# Points update mein allowed fields only — client se arbitrary points set nahi
 SAFE_UPDATE_FIELDS = {"energy", "boosts", "level", "taps_per_tap", "max_energy", "energy_recharge_rate"}
 
 def default_user(user_id: str, name: str = "Guest", photo_url: str = "") -> dict:
@@ -36,38 +34,6 @@ def default_user(user_id: str, name: str = "Guest", photo_url: str = "") -> dict
         "created_at":         datetime.utcnow(),
         "last_seen":          datetime.utcnow(),
     }
-
-
-def verify_telegram_init_data(init_data: str) -> dict | None:
-    bot_token = os.getenv("BOT_TOKEN", "")
-    if not bot_token or not init_data:
-        return None
-    try:
-        params = {}
-        for part in init_data.split("&"):
-            if "=" in part:
-                k, v = part.split("=", 1)
-                params[unquote(k)] = unquote(v)
-        received_hash = params.pop("hash", None)
-        if not received_hash:
-            return None
-        data_check = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
-        secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
-        computed   = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(computed, received_hash):
-            return None
-        return json.loads(params.get("user", "{}"))
-    except Exception:
-        return None
-
-
-def get_verified_user_id(init_data: str | None) -> str | None:
-    if not init_data:
-        return None
-    user = verify_telegram_init_data(init_data)
-    if user and user.get("id"):
-        return str(user["id"])
-    return None
 
 
 @router.get("/user/{user_id}")
@@ -96,13 +62,11 @@ async def update_user(
     data: UserUpdate,
     x_telegram_init_data: str | None = Header(default=None)
 ):
-    # BUG FIX #7: Verify identity before allowing any update
     verified_id = get_verified_user_id(x_telegram_init_data)
     if verified_id and verified_id != user_id:
         raise HTTPException(403, "Unauthorized")
 
-    # BUG FIX #7: 'points' field is NOT allowed via client update —
-    # points are only modified by game endpoints (tap, daily, spin, task, boost)
+    # 'points' field is NOT allowed via client update
     raw = {k: v for k, v in data.dict().items() if v is not None}
     update_dict = {k: v for k, v in raw.items() if k in SAFE_UPDATE_FIELDS}
     update_dict["last_seen"] = datetime.utcnow()
@@ -114,16 +78,15 @@ async def update_user(
     return {"status": "ok"}
 
 
-# ── TAP ENDPOINT (secure points increment) ───────────────────
+# ── TAP ENDPOINT ─────────────────────────────────────────────
 @router.post("/user/{user_id}/tap")
 async def record_tap(
     user_id: str,
     x_telegram_init_data: str | None = Header(default=None)
 ):
     """
-    BUG FIX #7: Instead of client sending arbitrary points via /update,
-    taps are processed here server-side. Client sends tap count,
-    server calculates points based on user's taps_per_tap stat.
+    BUG FIX (tap batch): Frontend batches taps and sends count,
+    server multiplies by taps_per_tap to prevent point manipulation.
     """
     verified_id = get_verified_user_id(x_telegram_init_data)
     if verified_id and verified_id != user_id:
@@ -150,7 +113,6 @@ async def buy_boost(
     body: BoostRequest,
     x_telegram_init_data: str | None = Header(default=None)
 ):
-    # BUG FIX #7: Verify identity
     verified_id = get_verified_user_id(x_telegram_init_data)
     if verified_id and verified_id != user_id:
         raise HTTPException(403, "Unauthorized")
