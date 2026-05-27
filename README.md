@@ -4,7 +4,7 @@ Telegram Mini App clicker game — Neon glow crystal tapping game similar to Not
 
 ---
 
-## 📁 Project Structure
+## 📁 Project 
 
 ```
 glowtap/
