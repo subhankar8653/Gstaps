@@ -1,12 +1,7 @@
-"""
-GlowTap Telegram Bot
-Run alongside FastAPI with: python bot.py
-Or integrate into main.py startup with asyncio
-"""
 import asyncio
 import os
 import httpx
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -17,9 +12,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_BASE    = os.getenv("API_BASE", "http://localhost:8000")
-WEBAPP_URL  = os.getenv("FRONTEND_URL", "https://your-vercel-url.vercel.app")
-ADMIN_IDS   = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
+API_BASE   = os.getenv("API_BASE", "https://gstaps-production.up.railway.app")
+WEBAPP_URL = os.getenv("FRONTEND_URL", "https://gstaps.vercel.app")
+ADMIN_IDS  = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 
 bot = Client(
     "glowtap_bot",
@@ -36,13 +31,11 @@ def play_keyboard(url: str = WEBAPP_URL) -> InlineKeyboardMarkup:
 
 @bot.on_message(filters.command("start"))
 async def start_cmd(client: Client, message: Message):
-    user     = message.from_user
-    user_id  = str(user.id)
-    name     = user.first_name + (" " + user.last_name if user.last_name else "")
-    photo    = ""
+    user    = message.from_user
+    user_id = str(user.id)
+    name    = user.first_name + (" " + user.last_name if user.last_name else "")
 
     # Handle referral
-    referral_code = None
     if len(message.command) > 1:
         referral_code = message.command[1]
         if referral_code != user_id:
@@ -54,11 +47,11 @@ async def start_cmd(client: Client, message: Message):
             except Exception:
                 pass
 
-    # Ensure user exists
+    # Ensure user exists in DB
     try:
         async with httpx.AsyncClient() as c:
             await c.get(f"{API_BASE}/api/user/{user_id}",
-                        params={"name": name, "photo_url": photo},
+                        params={"name": name, "photo_url": ""},
                         timeout=5)
     except Exception:
         pass
@@ -75,7 +68,7 @@ async def start_cmd(client: Client, message: Message):
     await message.reply(
         welcome,
         reply_markup=play_keyboard(),
-        parse_mode="markdown",
+        parse_mode=enums.ParseMode.MARKDOWN,
     )
 
 
@@ -84,29 +77,23 @@ async def stats_cmd(client: Client, message: Message):
     user_id = str(message.from_user.id)
     try:
         async with httpx.AsyncClient() as c:
-            res  = await c.get(f"{API_BASE}/api/user/{user_id}", timeout=5)
-            data = res.json()
+            res       = await c.get(f"{API_BASE}/api/user/{user_id}", timeout=5)
+            data      = res.json()
             rank_res  = await c.get(f"{API_BASE}/api/leaderboard/rank/{user_id}", timeout=5)
             rank_data = rank_res.json()
 
-        pts   = data.get("points", 0)
-        lvl   = data.get("level", 1)
-        refs  = data.get("referral_count", 0)
-        rank  = rank_data.get("rank", "—")
-        streak= data.get("daily_streak", 0)
-
         text = (
             f"📊 **Your GlowTap Stats**\n\n"
-            f"💎 Points: **{pts:,}**\n"
-            f"⚡ Level:  **{lvl}**\n"
-            f"🏆 Rank:   **#{rank}**\n"
-            f"👥 Refs:   **{refs}**\n"
-            f"🔥 Streak: **{streak} days**"
+            f"💎 Points: **{data.get('points', 0):,}**\n"
+            f"⚡ Level:  **{data.get('level', 1)}**\n"
+            f"🏆 Rank:   **#{rank_data.get('rank', '—')}**\n"
+            f"👥 Refs:   **{data.get('referral_count', 0)}**\n"
+            f"🔥 Streak: **{data.get('daily_streak', 0)} days**"
         )
     except Exception:
         text = "⚠️ Could not fetch stats. Try again later."
 
-    await message.reply(text, reply_markup=play_keyboard(), parse_mode="markdown")
+    await message.reply(text, reply_markup=play_keyboard(), parse_mode=enums.ParseMode.MARKDOWN)
 
 
 @bot.on_message(filters.command("broadcast") & filters.user(ADMIN_IDS))
@@ -116,12 +103,10 @@ async def broadcast_cmd(client: Client, message: Message):
         return
 
     text = " ".join(message.command[1:])
-    sent = 0
-    fail = 0
+    sent = fail = 0
 
     try:
         async with httpx.AsyncClient() as c:
-            # Get all user IDs from the API (add this endpoint if needed)
             res   = await c.get(f"{API_BASE}/api/leaderboard?limit=10000", timeout=10)
             users = res.json()
     except Exception:
@@ -135,10 +120,10 @@ async def broadcast_cmd(client: Client, message: Message):
                 int(u["_id"]),
                 f"📢 **GlowTap Announcement**\n\n{text}",
                 reply_markup=play_keyboard(),
-                parse_mode="markdown",
+                parse_mode=enums.ParseMode.MARKDOWN,
             )
             sent += 1
-            await asyncio.sleep(0.05)  # rate limit
+            await asyncio.sleep(0.05)
         except Exception:
             fail += 1
 
@@ -154,7 +139,7 @@ async def help_cmd(client: Client, message: Message):
         "/help  — Show this message\n\n"
         "Tap below to play! ⬇️",
         reply_markup=play_keyboard(),
-        parse_mode="markdown",
+        parse_mode=enums.ParseMode.MARKDOWN,
     )
 
 
