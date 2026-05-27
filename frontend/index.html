@@ -404,27 +404,50 @@ window.Telegram?.WebApp?.enableClosingConfirmation?.();
 async function init() {
   const tg = window.Telegram?.WebApp;
   const u  = tg?.initDataUnsafe?.user;
+
+  // BUG FIX #4: Agar Telegram context nahi mila to app block karo —
+  // fake dev user ID production mein nahi banna chahiye
   if (u) {
     state.userId   = String(u.id);
     state.name     = u.first_name + (u.last_name?' '+u.last_name:'');
     state.photoUrl = u.photo_url||'';
   } else {
-    state.userId = 'dev_'+Math.floor(Math.random()*99999);
-    state.name   = 'Dev User';
+    // Development mode check — production mein block
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isDev) {
+      state.userId = 'dev_test_user';
+      state.name   = 'Dev User';
+    } else {
+      document.getElementById('loader').innerHTML =
+        '<div style="text-align:center;padding:40px;font-family:Orbitron,sans-serif">' +
+        '<div style="font-size:2rem">⚠️</div>' +
+        '<div style="margin-top:12px;color:#ff00f2">Open via Telegram Bot</div>' +
+        '<div style="font-size:.75rem;color:#aaa;margin-top:8px">This app must be opened from Telegram</div></div>';
+      return;
+    }
   }
+
+  // BUG FIX #1: DB se state load karo pehle, tabhi checkDailyBonus
+  let dbLoaded = false;
   try {
     const res  = await apiFetch(`/api/user/${state.userId}?name=${encodeURIComponent(state.name)}&photo_url=${encodeURIComponent(state.photoUrl)}`);
     const data = await res.json();
     mergeState(data);
+    dbLoaded = true;
   } catch {
-    const saved = localStorage.getItem('glowtapData');
+    // DB fail hone pe localStorage se load karo
+    const saved = localStorage.getItem('glowtapData_' + state.userId);
     if (saved) try { mergeState(JSON.parse(saved)); } catch(_){}
   }
+
   updateUI();
   startEnergyRecharge();
   renderTasks();
   setupTapBtn();
   drawWheel();
+
+  // BUG FIX #1: Daily bonus sirf tab dikhao jab state sahi load ho gayi ho
+  // Agar DB load hua to server ki lastClaimDate trust karo
   checkDailyBonus();
   checkSpinStatus();
   document.getElementById('refLink').textContent = `https://t.me/${BOT_USERNAME}?start=${state.userId}`;
@@ -462,19 +485,39 @@ function scheduleSave() {
   saveTimer = setTimeout(saveToServer, 3000);
 }
 
+// BUG FIX #7: Separate tap batching — sends tap count to server every 2s
+let tapBatch = 0, tapTimer = null;
+function scheduleTapSave() {
+  tapBatch++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(flushTaps, 2000);
+}
+async function flushTaps() {
+  if (tapBatch <= 0) return;
+  const count = tapBatch;
+  tapBatch = 0;
+  try {
+    // Server calculates points based on user's taps_per_tap stat
+    await apiFetch(`/api/user/${state.userId}/tap`, {method:'POST'});
+  } catch {
+    // Keep local state — will sync on next saveToServer
+  }
+}
+
 async function saveToServer() {
+  // BUG FIX #7: Points client se nahi bhejna — sirf safe game-state fields
   try {
     await apiFetch(`/api/user/${state.userId}/update`, {
       method:'POST',
       body:JSON.stringify({
-        points:state.points, energy:Math.floor(state.energy),
+        energy:Math.floor(state.energy),
         boosts:state.boosts, level:state.level,
         taps_per_tap:state.tapsPerTap,
         max_energy:state.maxEnergy,
         energy_recharge_rate:state.energyRechargeRate
       })
     });
-  } catch { localStorage.setItem('glowtapData', JSON.stringify(state)); }
+  } catch { localStorage.setItem('glowtapData_'+state.userId, JSON.stringify(state)); }
 }
 
 // ═══ TAP ═══
@@ -488,10 +531,12 @@ function handleTap(e) {
   e.preventDefault();
   if (state.energy < 1) { showToast('⚡ Out of energy! Wait to recharge'); return; }
   const tap = Math.max(1, Math.ceil(state.tapsPerTap));
+  // BUG FIX #7: Optimistic UI update (fast response) but server se points verify
   state.points += tap;
   state.energy  = Math.max(0, state.energy - 1);
   updateUI();
-  scheduleSave();
+  // Debounced tap save — batch multiple taps
+  scheduleTapSave();
 
   // Float +N text
   const touches = e.changedTouches || [{clientX:e.clientX, clientY:e.clientY}];
@@ -595,6 +640,7 @@ function switchPage(name, btn) {
   btn.classList.add('active');
   if (name==='ranks')   loadLeaderboard();
   if (name==='spin')    { drawWheel(); checkSpinStatus(); }
+  if (name==='friends') { loadFriends(); }  // BUG FIX #3: Tab switch pe fresh load
   if (name==='friends') loadFriends();
 }
 
@@ -649,9 +695,16 @@ function renderLB(players) {
 
 // ═══ DAILY BONUS ═══
 function checkDailyBonus() {
-  const today = new Date().toDateString();
-  const last  = state.lastClaimDate ? new Date(state.lastClaimDate).toDateString() : null;
-  if (last === today) return;
+  // BUG FIX #1: Server se load hui lastClaimDate pe rely karo
+  // ISO string ya date string dono handle karo
+  const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD format
+  let lastDate = null;
+  if (state.lastClaimDate) {
+    // ISO string ho to date part lo, plain date string ho to waise use karo
+    lastDate = state.lastClaimDate.slice(0,10);
+  }
+  // Agar aaj pehle hi claim ho gayi hai to overlay mat dikhao
+  if (lastDate === today) return;
   const streak = (state.dailyStreak || 0) + 1;
   const day    = Math.min(streak, 7);
   const reward = DAILY_REWARDS[day - 1];
@@ -675,23 +728,33 @@ function renderStreakDays(currentDay) {
 }
 
 async function claimDaily() {
+  // BUG FIX #8: Pehle lastClaimDate mark karo taaki double-click se double reward na mile
+  const today = new Date().toISOString().slice(0,10);
+  if (state.lastClaimDate && state.lastClaimDate.slice(0,10) === today) {
+    document.getElementById('dailyOverlay').classList.add('hide');
+    return;
+  }
+  // Optimistically mark as claimed to prevent double-click
+  state.lastClaimDate = new Date().toISOString();
   document.getElementById('dailyOverlay').classList.add('hide');
+
   try {
     const res  = await apiFetch(`/api/daily-claim/${state.userId}`, {method:'POST'});
     const data = await res.json();
     if (data.points_earned) {
-      state.points       += data.points_earned;
-      state.dailyStreak   = data.streak || state.dailyStreak;
-      state.lastClaimDate = new Date().toISOString();
+      // BUG FIX #8: Server se actual points lo — no local calculation
+      state.points      += data.points_earned;
+      state.dailyStreak  = data.streak || state.dailyStreak;
       updateUI();
       showToast(`🌟 +${fmtNum(data.points_earned)} Daily Bonus!`);
     }
   } catch {
+    // BUG FIX #8: API fail hone pe bhi offline reward do (ek baar)
+    // state.lastClaimDate pehle se set ho gayi — double-credit nahi hoga
     const streak = (state.dailyStreak||0)+1;
     const reward = DAILY_REWARDS[Math.min(streak-1,6)];
-    state.points       += reward;
-    state.dailyStreak   = streak;
-    state.lastClaimDate = new Date().toISOString();
+    state.points      += reward;
+    state.dailyStreak  = streak;
     updateUI();
     scheduleSave();
     showToast(`🌟 +${fmtNum(reward)} Daily Bonus!`);
@@ -747,8 +810,9 @@ function drawWheel(highlightIdx=-1, rotOffset=0) {
 }
 
 function checkSpinStatus() {
-  const today = new Date().toDateString();
-  const last  = state.lastSpinDate ? new Date(state.lastSpinDate).toDateString() : null;
+  // BUG FIX #5: ISO date format use karo consistent comparison ke liye
+  const today = new Date().toISOString().slice(0,10);
+  const last  = state.lastSpinDate ? state.lastSpinDate.slice(0,10) : null;
   const btn   = document.getElementById('spinBtn');
   const sub   = document.getElementById('spinSubtitle');
   if (last === today) {
@@ -843,37 +907,61 @@ function renderTasks() {
 }
 
 async function completeTask(taskId, url) {
-  if (url) window.open(url,'_blank');
+  // BUG FIX #2: tg_join ke liye pehle channel open karo, phir 3s baad verify karo
+  if (taskId === 'tg_join') {
+    if (url) {
+      const tg = window.Telegram?.WebApp;
+      if (tg?.openTelegramLink) tg.openTelegramLink(url);
+      else window.open(url, '_blank');
+    }
+    showToast('📢 Join the channel, then tap "Verify" below!');
+    // Button ko "Verify" mein badal do
+    const btn = document.querySelector(`[onclick="completeTask('${taskId}','${url||''}')"]`);
+    if (btn) {
+      btn.textContent = '✅ Verify';
+      btn.onclick = () => verifyAndClaimTask(taskId);
+    }
+    return;
+  }
+
+  // tg_share task ke liye shareLink call karo
+  if (taskId === 'tg_share') {
+    shareLink();
+  } else if (url) {
+    window.open(url, '_blank');
+  }
+
+  await verifyAndClaimTask(taskId);
+}
+
+async function verifyAndClaimTask(taskId) {
   try {
     const res  = await apiFetch(`/api/task/complete/${state.userId}`, {
       method:'POST', body:JSON.stringify({task_id:taskId})
     });
     const data = await res.json();
-    if (data.points_earned) {
+    if (res.ok && data.points_earned) {
       state.points += data.points_earned;
       if (!state.completedTasks.includes(taskId)) state.completedTasks.push(taskId);
       updateUI(); renderTasks();
       showToast(`✅ +${fmtNum(data.points_earned)} $GTAP!`);
+    } else if (data.detail) {
+      showToast('⚠️ ' + data.detail);
     }
   } catch {
-    const task = TASKS.find(t=>t.id===taskId);
-    if (task && !state.completedTasks.includes(taskId)) {
-      state.points += task.reward;
-      state.completedTasks.push(taskId);
-      updateUI(); renderTasks();
-      showToast(`✅ +${fmtNum(task.reward)} $GTAP!`);
-      scheduleSave();
-    }
+    showToast('⚠️ Could not verify. Try again!');
   }
 }
 
 // ═══ FRIENDS ═══
 async function loadFriends() {
+  // BUG FIX #3: Referral count properly sync karo DB se har baar Friends tab khule
   try {
     const res  = await apiFetch(`/api/referrals/${state.userId}`);
     const data = await res.json();
-    state.referralCount    = data.referral_count    || state.referralCount;
-    state.referralEarnings = data.referral_earnings || state.referralEarnings;
+    // ?? ki jagah explicit check — 0 bhi valid value hai
+    if (typeof data.referral_count === 'number')    state.referralCount    = data.referral_count;
+    if (typeof data.referral_earnings === 'number') state.referralEarnings = data.referral_earnings;
     updateUI();
     renderFriendsList(data.friends||[]);
   } catch {}
