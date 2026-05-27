@@ -1,6 +1,4 @@
-fastapi
-uvicorn[standard]
-motor
-python-dotenv
-pydantic
+pyrogram==2.0.106
+TgCrypto
 httpx
+python-dotenv
